@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Evolve Mona Lisa | Midlife Programmer</title>
+
+    <link
+        rel="stylesheet"
+        href="css/style.css"
+    >
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+</head>
+
+
+<body>
+
+
+<!-- =========================================================
+     HEADER
+     ========================================================= -->
+
+<header class="site-header">
+
+    <div class="header-inner">
+
+        <a
+            class="logo"
+            href="../../index.html"
+        >
+            <span class="logo-mark">&lt;/&gt;</span>
+            <span>Midlife Programmer</span>
+        </a>
+
+
+        <nav>
+
+            <a href="../../index.html#projects">
+                Projects
+            </a>
+
+            <a href="../../index.html#about">
+                About
+            </a>
+
+            <a href="../../blog.html">
+                Blog
+            </a>
+
+            <a
+                href="https://github.com/"
+                target="_blank"
+                rel="noopener"
+            >
+                GitHub
+            </a>
+
+        </nav>
+
+    </div>
+
+</header>
+
+
+
+<!-- =========================================================
+     MAIN
+     ========================================================= -->
+
+<main>
+
+
+    <!-- =====================================================
+         INTRODUCTION
+         ===================================================== -->
+
+    <section class="project-intro">
+
+        <p class="eyebrow">
+            GENETIC ALGORITHMS • IMAGE APPROXIMATION • EVOLUTION
+        </p>
+
+        <h1>
+            Evolve <span>Mona Lisa</span>
+        </h1>
+
+        <p class="intro-description">
+            Reconstruct an image using nothing but translucent triangles
+            and evolutionary computation. Random mutations compete against
+            one another as the algorithm gradually searches for a closer
+            approximation of the target image.
+        </p>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         MAIN WORKSPACE
+         ===================================================== -->
+
+    <section class="workspace">
+
+
+        <!-- =================================================
+             PARAMETERS
+             ================================================= -->
+
+        <aside class="control-panel">
+
+            <div class="panel-heading">
+
+                <span class="panel-number">
+                    01
+                </span>
+
+                <h2>
+                    Evolution
+                </h2>
+
+            </div>
+
+
+
+            <!-- TARGET IMAGE -->
+
+            <div class="control-group">
+
+                <label>
+                    Target Image
+                </label>
+
+                <div class="target-thumbnail">
+
+                    <img
+                        id="targetThumbnail"
+                        src="images/mona_lisa_web_480px.jpg"
+                        alt="Target image"
+                    >
+
+                </div>
+
+                <input
+                    id="imageUpload"
+                    class="file-input"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                >
+
+                <label
+                    for="imageUpload"
+                    class="button secondary full-width upload-button"
+                >
+                    Replace Image
+                </label>
+
+            </div>
+
+
+
+            <div class="control-divider"></div>
+
+
+
+            <!-- TRIANGLE COUNT -->
+
+            <div class="control-group">
+
+                <label for="triangleCount">
+
+                    Starting Triangles
+
+                    <span id="triangleCountValue">
+                        100
+                    </span>
+
+                </label>
+
+                <input
+                    id="triangleCount"
+                    type="range"
+                    min="10"
+                    max="500"
+                    step="10"
+                    value="100"
+                >
+
+            </div>
+
+
+
+            <!-- POPULATION SIZE -->
+
+            <div class="control-group">
+
+                <label for="populationSize">
+
+                    Population
+
+                    <span id="populationSizeValue">
+                        30
+                    </span>
+
+                </label>
+
+                <input
+                    id="populationSize"
+                    type="range"
+                    min="5"
+                    max="100"
+                    step="5"
+                    value="30"
+                >
+
+            </div>
+
+
+
+            <!-- MUTATIONS -->
+
+            <div class="control-group">
+
+                <label for="mutationsPerChild">
+
+                    Mutations / Child
+
+                    <span id="mutationsPerChildValue">
+                        2
+                    </span>
+
+                </label>
+
+                <input
+                    id="mutationsPerChild"
+                    type="range"
+                    min="1"
+                    max="20"
+                    step="1"
+                    value="2"
+                >
+
+            </div>
+
+
+
+            <!-- MUTATION STRENGTH -->
+
+            <div class="control-group">
+
+                <label for="mutationStrength">
+
+                    Mutation Strength
+
+                    <span id="mutationStrengthValue">
+                        15%
+                    </span>
+
+                </label>
+
+                <input
+                    id="mutationStrength"
+                    type="range"
+                    min="1"
+                    max="100"
+                    step="1"
+                    value="15"
+                >
+
+            </div>
+
+
+
+            <!-- GENERATIONS PER FRAME -->
+
+            <div class="control-group">
+
+                <label for="evolutionSpeed">
+
+                    Generations / Frame
+
+                    <span id="evolutionSpeedValue">
+                        1
+                    </span>
+
+                </label>
+
+                <input
+                    id="evolutionSpeed"
+                    type="range"
+                    min="1"
+                    max="50"
+                    step="1"
+                    value="1"
+                >
+
+            </div>
+
+
+
+            <!-- BACKGROUND -->
+
+            <div class="control-group">
+
+                <label for="backgroundMode">
+                    Background
+                </label>
+
+                <select id="backgroundMode">
+
+                    <option value="average" selected>
+                        Target average colour
+                    </option>
+
+                    <option value="black">
+                        Black
+                    </option>
+
+                    <option value="white">
+                        White
+                    </option>
+
+                    <option value="random">
+                        Random
+                    </option>
+
+                </select>
+
+            </div>
+
+
+
+            <!-- START -->
+
+            <button
+                id="startButton"
+                class="button primary full-width"
+            >
+                Start Evolution
+            </button>
+
+        </aside>
+
+
+
+        <!-- =================================================
+             VISUALISER
+             ================================================= -->
+
+        <section class="visualiser-panel">
+
+
+            <!-- HEADER -->
+
+            <div class="visualiser-header">
+
+                <div>
+
+                    <p class="panel-label">
+                        CURRENT BEST GENOME
+                    </p>
+
+                    <h2 id="visualisationTitle">
+                        Evolution Preview
+                    </h2>
+
+                </div>
+
+
+
+                <div class="simulation-stats">
+
+                    <div>
+
+                        <span>
+                            SIMILARITY
+                        </span>
+
+                        <strong id="similarityStat">
+                            0.00%
+                        </strong>
+
+                    </div>
+
+
+                    <div>
+
+                        <span>
+                            GENERATION
+                        </span>
+
+                        <strong id="generationStat">
+                            0
+                        </strong>
+
+                    </div>
+
+
+                    <div>
+
+                        <span>
+                            ATTEMPTS
+                        </span>
+
+                        <strong id="attemptStat">
+                            0
+                        </strong>
+
+                    </div>
+
+
+                    <div>
+
+                        <span>
+                            TRIANGLES
+                        </span>
+
+                        <strong id="triangleStat">
+                            100
+                        </strong>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- IMAGE COMPARISON -->
+
+            <div class="comparison-workspace">
+
+
+                <!-- TARGET -->
+
+                <div class="image-stage">
+
+                    <div class="stage-heading">
+
+                        <span>
+                            TARGET
+                        </span>
+
+                        <strong>
+                            Reference Image
+                        </strong>
+
+                    </div>
+
+
+                    <div class="target-display">
+
+                        <img
+                            id="targetImage"
+                            src="images/mona_lisa_web_480px.jpg"
+                            alt="Target Mona Lisa"
+                        >
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- EVOLVED -->
+
+                <div class="image-stage evolved-stage">
+
+                    <div class="stage-heading">
+
+                        <span>
+                            EVOLVED
+                        </span>
+
+                        <strong>
+                            Best Genome
+                        </strong>
+
+                    </div>
+
+
+                    <div class="canvas-container">
+
+                        <canvas
+                            id="evolutionCanvas"
+                            width="480"
+                            height="715"
+                        ></canvas>
+
+
+                        <div
+                            class="canvas-message"
+                            id="canvasMessage"
+                        >
+                            Press Start Evolution to begin.
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+            </div>
+
+
+
+            <!-- SIMULATION CONTROLS -->
+
+            <div class="simulation-controls">
+
+                <button
+                    id="resumeButton"
+                    class="button primary"
+                >
+                    Start
+                </button>
+
+                <button
+                    id="pauseButton"
+                    class="button secondary"
+                >
+                    Pause
+                </button>
+
+                <button
+                    id="stepButton"
+                    class="button secondary"
+                >
+                    Step
+                </button>
+
+                <button
+                    id="resetButton"
+                    class="button secondary"
+                >
+                    Reset
+                </button>
+
+                <button
+                    id="downloadButton"
+                    class="button secondary push-right"
+                >
+                    Save PNG
+                </button>
+
+            </div>
+
+
+        </section>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         FITNESS / PROGRESS
+         ===================================================== -->
+
+    <section class="progress-section">
+
+        <div class="section-heading">
+
+            <span class="panel-number">
+                02
+            </span>
+
+            <div>
+
+                <h2>
+                    Evolution Progress
+                </h2>
+
+                <p>
+                    Statistics from the currently surviving genome.
+                    Fitness improves as the generated image approaches
+                    the target.
+                </p>
+
+            </div>
+
+        </div>
+
+
+
+        <div class="metric-grid">
+
+
+            <!-- SIMILARITY -->
+
+            <div class="metric-card">
+
+                <span class="metric-label">
+                    SIMILARITY
+                </span>
+
+                <strong
+                    id="similarityLarge"
+                    class="metric-value"
+                >
+                    0.00%
+                </strong>
+
+                <div class="progress-track">
+
+                    <div
+                        id="similarityBar"
+                        class="progress-fill"
+                        style="width: 0%"
+                    ></div>
+
+                </div>
+
+                <p>
+                    Percentage similarity between the current genome
+                    and target pixels.
+                </p>
+
+            </div>
+
+
+
+            <!-- FITNESS -->
+
+            <div class="metric-card">
+
+                <span class="metric-label">
+                    BEST FITNESS
+                </span>
+
+                <strong
+                    id="fitnessStat"
+                    class="metric-value"
+                >
+                    —
+                </strong>
+
+                <p>
+                    Fitness score of the best genome found during
+                    the evolutionary search.
+                </p>
+
+            </div>
+
+
+
+            <!-- GENERATIONS -->
+
+            <div class="metric-card">
+
+                <span class="metric-label">
+                    GENERATIONS
+                </span>
+
+                <strong
+                    id="generationLarge"
+                    class="metric-value"
+                >
+                    0
+                </strong>
+
+                <p>
+                    Number of complete evolutionary generations
+                    processed.
+                </p>
+
+            </div>
+
+
+
+            <!-- EVALUATIONS -->
+
+            <div class="metric-card">
+
+                <span class="metric-label">
+                    FITNESS EVALUATIONS
+                </span>
+
+                <strong
+                    id="evaluationStat"
+                    class="metric-value"
+                >
+                    0
+                </strong>
+
+                <p>
+                    Number of candidate images compared against
+                    the target.
+                </p>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         HOW IT WORKS
+         ===================================================== -->
+
+    <section class="process-section">
+
+        <div class="section-heading">
+
+            <span class="panel-number">
+                03
+            </span>
+
+            <div>
+
+                <h2>
+                    Evolutionary Process
+                </h2>
+
+                <p>
+                    Each candidate image is encoded as a genome containing
+                    translucent triangle genes.
+                </p>
+
+            </div>
+
+        </div>
+
+
+
+        <div class="process-grid">
+
+
+            <div class="process-card">
+
+                <span class="process-number">
+                    01
+                </span>
+
+                <h3>
+                    Initialise
+                </h3>
+
+                <p>
+                    Generate a population of genomes containing randomly
+                    positioned and coloured triangles.
+                </p>
+
+            </div>
+
+
+
+            <div class="process-card">
+
+                <span class="process-number">
+                    02
+                </span>
+
+                <h3>
+                    Render
+                </h3>
+
+                <p>
+                    Draw each genome to an off-screen canvas to produce
+                    its image approximation.
+                </p>
+
+            </div>
+
+
+
+            <div class="process-card">
+
+                <span class="process-number">
+                    03
+                </span>
+
+                <h3>
+                    Evaluate
+                </h3>
+
+                <p>
+                    Compare generated pixels against the target image
+                    and calculate a fitness score.
+                </p>
+
+            </div>
+
+
+
+            <div class="process-card">
+
+                <span class="process-number">
+                    04
+                </span>
+
+                <h3>
+                    Mutate
+                </h3>
+
+                <p>
+                    Change triangle positions, colours, opacity and
+                    geometry to create new candidate genomes.
+                </p>
+
+            </div>
+
+
+
+            <div class="process-card">
+
+                <span class="process-number">
+                    05
+                </span>
+
+                <h3>
+                    Select
+                </h3>
+
+                <p>
+                    Keep successful mutations and discard candidates
+                    that produce a worse approximation.
+                </p>
+
+            </div>
+
+
+
+            <div class="process-card">
+
+                <span class="process-number">
+                    06
+                </span>
+
+                <h3>
+                    Repeat
+                </h3>
+
+                <p>
+                    Continue the process for thousands of generations
+                    as increasingly recognisable structure emerges.
+                </p>
+
+            </div>
+
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         INFORMATION
+         ===================================================== -->
+
+    <section class="information-section">
+
+        <span class="panel-number">
+            04
+        </span>
+
+        <div>
+
+            <h2>
+                Painting With Evolution
+            </h2>
+
+            <p>
+                The algorithm does not know what the Mona Lisa looks like.
+                It does not recognise faces, landscapes, eyes or individual
+                objects. Instead, it treats the target as a collection of
+                coloured pixels.
+            </p>
+
+            <p>
+                A candidate solution consists of many translucent triangles.
+                Their positions, shapes, colours and opacity values form a
+                genome. Small random mutations alter these genes and the
+                resulting image is compared with the target.
+            </p>
+
+            <p>
+                Mutations that improve fitness survive. Poorer mutations are
+                discarded. Repeating this simple process many thousands of
+                times allows recognisable features of the original image to
+                emerge without explicitly drawing any of them.
+            </p>
+
+        </div>
+
+    </section>
+
+
+</main>
+
+
+
+<!-- =========================================================
+     FOOTER
+     ========================================================= -->
+
+<footer>
+
+    <div>
+
+        <strong>
+            Midlife Programmer
+        </strong>
+
+        <p>
+            Software experiments, algorithms and unnecessarily
+            large numbers of pixels.
+        </p>
+
+    </div>
+
+    <p>
+        Built with HTML, CSS, JavaScript and curiosity.
+    </p>
+
+</footer>
+
+
+
+<!-- =========================================================
+     JAVASCRIPT
+     ========================================================= -->
+
+<script src="js/TriangleGene.js"></script>
+<script src="js/Genome.js"></script>
+<script src="js/TargetImage.js"></script>
+<script src="js/FitnessEvaluator.js"></script>
+<script src="js/Population.js"></script>
+<script src="js/GeneticAlgorithm.js"></script>
+<script src="js/EvolutionRenderer.js"></script>
+<script src="js/app.js"></script>
+
+
+</body>
+
+</html>
