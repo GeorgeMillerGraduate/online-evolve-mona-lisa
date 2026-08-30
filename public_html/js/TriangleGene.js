@@ -5,13 +5,17 @@
 
    Represents one translucent triangle in a Genome.
 
-   Each triangle contains:
+   Coordinates are stored in canonical canvas pixels.
 
-   - Three vertices
-   - Red, green and blue colour channels
-   - Alpha / opacity
+   Provides a common interface with CircleGene and DotGene
+   for:
 
-   Evolution mutates these properties over time.
+   - mutation
+   - cloning
+   - error-guided movement
+   - target-colour assignment
+   - dimension scaling
+   - JSON import/export
    ========================================================= */
 
 
@@ -56,17 +60,25 @@ class TriangleGene {
         }
 
 
+        this.type =
+            "triangle";
+
+
         this.width =
             Math.max(
                 1,
-                Math.floor(width)
+                Math.floor(
+                    Number(width) || 480
+                )
             );
 
 
         this.height =
             Math.max(
                 1,
-                Math.floor(height)
+                Math.floor(
+                    Number(height) || 715
+                )
             );
 
 
@@ -102,9 +114,8 @@ class TriangleGene {
 
 
         /*
-         * Semi-transparent triangles work considerably
-         * better for image approximation than fully opaque
-         * shapes because colours can blend together.
+         * Semi-transparent geometry allows many shapes to
+         * blend into intermediate colours.
          */
 
         this.a =
@@ -141,7 +152,8 @@ class TriangleGene {
     randomChannel() {
 
         return Math.floor(
-            Math.random() * 256
+            Math.random() *
+            256
         );
     }
 
@@ -153,14 +165,10 @@ class TriangleGene {
 
     randomAlpha() {
 
-        /*
-         * Avoid starting with completely transparent or
-         * completely opaque triangles.
-         */
-
         return (
             0.05 +
-            Math.random() * 0.45
+            Math.random() *
+            0.45
         );
     }
 
@@ -176,24 +184,22 @@ class TriangleGene {
 
         strength =
             this.clamp(
-                strength,
+                Number(strength) || 0.15,
                 0.001,
                 1
             );
 
 
-        /*
-         * Pick one mutation category.
-         */
-
         const mutationType =
             Math.floor(
-                Math.random() * 8
+                Math.random() *
+                8
             );
 
 
-        switch (mutationType) {
-
+        switch (
+            mutationType
+        ) {
 
             /* =============================================
                MOVE ONE VERTEX
@@ -208,9 +214,8 @@ class TriangleGene {
                 break;
 
 
-
             /* =============================================
-               MOVE X ONLY
+               X COORDINATE
                ============================================= */
 
             case 1:
@@ -223,9 +228,8 @@ class TriangleGene {
                 break;
 
 
-
             /* =============================================
-               MOVE Y ONLY
+               Y COORDINATE
                ============================================= */
 
             case 2:
@@ -236,7 +240,6 @@ class TriangleGene {
                 );
 
                 break;
-
 
 
             /* =============================================
@@ -254,7 +257,6 @@ class TriangleGene {
                 break;
 
 
-
             /* =============================================
                GREEN
                ============================================= */
@@ -268,7 +270,6 @@ class TriangleGene {
                     );
 
                 break;
-
 
 
             /* =============================================
@@ -286,7 +287,6 @@ class TriangleGene {
                 break;
 
 
-
             /* =============================================
                ALPHA
                ============================================= */
@@ -298,7 +298,6 @@ class TriangleGene {
                 );
 
                 break;
-
 
 
             /* =============================================
@@ -336,31 +335,22 @@ class TriangleGene {
             this.points[index];
 
 
-        /*
-         * Mutation range scales with canvas dimensions.
-         */
-
         const deltaX =
-            (
-                Math.random() * 2 -
-                1
-            ) *
+            this.randomSigned() *
             this.width *
             strength;
 
 
         const deltaY =
-            (
-                Math.random() * 2 -
-                1
-            ) *
+            this.randomSigned() *
             this.height *
             strength;
 
 
         point.x =
             this.clamp(
-                point.x + deltaX,
+                point.x +
+                deltaX,
                 0,
                 this.width
             );
@@ -368,7 +358,8 @@ class TriangleGene {
 
         point.y =
             this.clamp(
-                point.y + deltaY,
+                point.y +
+                deltaY,
                 0,
                 this.height
             );
@@ -397,40 +388,28 @@ class TriangleGene {
 
 
         if (
-            axis === "x"
+            axis ===
+            "x"
         ) {
-
-            const delta =
-                (
-                    Math.random() * 2 -
-                    1
-                ) *
-                this.width *
-                strength;
-
 
             point.x =
                 this.clamp(
-                    point.x + delta,
+                    point.x +
+                    this.randomSigned() *
+                    this.width *
+                    strength,
                     0,
                     this.width
                 );
 
         } else {
 
-
-            const delta =
-                (
-                    Math.random() * 2 -
-                    1
-                ) *
-                this.height *
-                strength;
-
-
             point.y =
                 this.clamp(
-                    point.y + delta,
+                    point.y +
+                    this.randomSigned() *
+                    this.height *
+                    strength,
                     0,
                     this.height
                 );
@@ -456,16 +435,10 @@ class TriangleGene {
             strength;
 
 
-        const change =
-            (
-                Math.random() * 2 -
-                1
-            ) *
-            maximumChange;
-
-
         return this.clamp(
-            value + change,
+            value +
+            this.randomSigned() *
+            maximumChange,
             0,
             255
         );
@@ -515,25 +488,12 @@ class TriangleGene {
         strength = 0.15
     ) {
 
-        const change =
-            (
-                Math.random() * 2 -
-                1
-            ) *
-            strength;
-
-
         this.a =
             this.clamp(
-                this.a + change,
-
-                /*
-                 * Keeping a tiny minimum opacity prevents
-                 * useless completely invisible genes.
-                 */
-
+                this.a +
+                this.randomSigned() *
+                strength,
                 0.01,
-
                 1
             );
 
@@ -552,27 +512,36 @@ class TriangleGene {
     ) {
 
         const deltaX =
-            (
-                Math.random() * 2 -
-                1
-            ) *
+            this.randomSigned() *
             this.width *
             strength;
 
 
         const deltaY =
-            (
-                Math.random() * 2 -
-                1
-            ) *
+            this.randomSigned() *
             this.height *
             strength;
 
 
-        /*
-         * Work out how far the entire triangle may move
-         * without any vertex leaving the canvas.
-         */
+        return this.translateBy(
+            deltaX,
+            deltaY
+        );
+    }
+
+
+
+    /* =====================================================
+       TRANSLATE BY PIXELS
+
+       Moves all three vertices while keeping the entire
+       triangle inside the canvas.
+       ===================================================== */
+
+    translateBy(
+        deltaX,
+        deltaY
+    ) {
 
         let minimumX =
             Infinity;
@@ -662,6 +631,269 @@ class TriangleGene {
 
 
     /* =====================================================
+       MOVE CENTRE TO POSITION
+       ===================================================== */
+
+    moveTo(
+        x,
+        y
+    ) {
+
+        const centre =
+            this.getCentre();
+
+
+        return this.translateBy(
+            x -
+            centre.x,
+            y -
+            centre.y
+        );
+    }
+
+
+
+    /* =====================================================
+       MOVE NEAR POSITION
+
+       Common interface shared with CircleGene and DotGene.
+
+       spread is expressed as a fraction of canvas size.
+       ===================================================== */
+
+    moveNear(
+        x,
+        y,
+        spread = 0.10
+    ) {
+
+        spread =
+            this.clamp(
+                Number(spread) || 0,
+                0,
+                1
+            );
+
+
+        const targetX =
+            Number(x) +
+            this.randomSigned() *
+            this.width *
+            spread;
+
+
+        const targetY =
+            Number(y) +
+            this.randomSigned() *
+            this.height *
+            spread;
+
+
+        return this.moveTo(
+            this.clamp(
+                targetX,
+                0,
+                this.width
+            ),
+            this.clamp(
+                targetY,
+                0,
+                this.height
+            )
+        );
+    }
+
+
+
+    /* =====================================================
+       MOVE TOWARD POSITION
+
+       Useful for guided evolution when we want to retain
+       some of the triangle's existing placement.
+       ===================================================== */
+
+    moveToward(
+        x,
+        y,
+        amount = 0.5
+    ) {
+
+        amount =
+            this.clamp(
+                Number(amount) || 0,
+                0,
+                1
+            );
+
+
+        const centre =
+            this.getCentre();
+
+
+        const targetX =
+            centre.x +
+            (
+                Number(x) -
+                centre.x
+            ) *
+            amount;
+
+
+        const targetY =
+            centre.y +
+            (
+                Number(y) -
+                centre.y
+            ) *
+            amount;
+
+
+        return this.moveTo(
+            targetX,
+            targetY
+        );
+    }
+
+
+
+    /* =====================================================
+       SET TARGET COLOUR
+
+       Used by error-guided evolution.
+
+       variation introduces a small random offset so guided
+       mutations do not all produce identical colours.
+       ===================================================== */
+
+    setTargetColour(
+        colour,
+        variation = 20
+    ) {
+
+        if (!colour) {
+
+            return this;
+        }
+
+
+        variation =
+            Math.max(
+                0,
+                Number(variation) || 0
+            );
+
+
+        const vary =
+            value =>
+                this.clamp(
+                    Number(value) +
+                    this.randomSigned() *
+                    variation,
+                    0,
+                    255
+                );
+
+
+        this.r =
+            vary(
+                colour.r ?? this.r
+            );
+
+
+        this.g =
+            vary(
+                colour.g ?? this.g
+            );
+
+
+        this.b =
+            vary(
+                colour.b ?? this.b
+            );
+
+
+        return this;
+    }
+
+
+
+    /* =====================================================
+       BLEND TOWARD TARGET COLOUR
+       ===================================================== */
+
+    blendTowardColour(
+        colour,
+        amount = 0.5
+    ) {
+
+        if (!colour) {
+
+            return this;
+        }
+
+
+        amount =
+            this.clamp(
+                Number(amount) || 0,
+                0,
+                1
+            );
+
+
+        this.r =
+            this.mixChannel(
+                this.r,
+                colour.r ?? this.r,
+                amount
+            );
+
+
+        this.g =
+            this.mixChannel(
+                this.g,
+                colour.g ?? this.g,
+                amount
+            );
+
+
+        this.b =
+            this.mixChannel(
+                this.b,
+                colour.b ?? this.b,
+                amount
+            );
+
+
+        return this;
+    }
+
+
+
+    /* =====================================================
+       MIX CHANNEL
+       ===================================================== */
+
+    mixChannel(
+        current,
+        target,
+        amount
+    ) {
+
+        return this.clamp(
+            current +
+            (
+                target -
+                current
+            ) *
+            amount,
+            0,
+            255
+        );
+    }
+
+
+
+    /* =====================================================
        RANDOMISE ONE POINT
        ===================================================== */
 
@@ -676,6 +908,25 @@ class TriangleGene {
 
 
         return this;
+    }
+
+
+
+    /* =====================================================
+       RANDOMISE POSITION
+
+       Moves the existing triangle to a random centre while
+       retaining its shape where canvas boundaries permit.
+       ===================================================== */
+
+    randomisePosition() {
+
+        return this.moveTo(
+            Math.random() *
+            this.width,
+            Math.random() *
+            this.height
+        );
     }
 
 
@@ -735,20 +986,10 @@ class TriangleGene {
         ];
 
 
-        this.r =
-            this.randomChannel();
+        this.randomiseColour();
 
 
-        this.g =
-            this.randomChannel();
-
-
-        this.b =
-            this.randomChannel();
-
-
-        this.a =
-            this.randomAlpha();
+        this.randomiseAlpha();
 
 
         return this;
@@ -777,6 +1018,20 @@ class TriangleGene {
     getPoints() {
 
         return this.points;
+    }
+
+
+
+    /* =====================================================
+       GET POSITION
+
+       For compatibility with CircleGene/DotGene, triangle
+       position means its centre.
+       ===================================================== */
+
+    getPosition() {
+
+        return this.getCentre();
     }
 
 
@@ -817,9 +1072,50 @@ class TriangleGene {
         a = this.a
     ) {
 
+        /*
+         * Also support:
+         *
+         * setColour({
+         *     r: ...,
+         *     g: ...,
+         *     b: ...,
+         *     a: ...
+         * });
+         */
+
+        if (
+            typeof r ===
+            "object"
+        ) {
+
+            const colour =
+                r;
+
+
+            r =
+                colour.r ??
+                this.r;
+
+
+            g =
+                colour.g ??
+                this.g;
+
+
+            b =
+                colour.b ??
+                this.b;
+
+
+            a =
+                colour.a ??
+                this.a;
+        }
+
+
         this.r =
             this.clamp(
-                r,
+                Number(r) || 0,
                 0,
                 255
             );
@@ -827,7 +1123,7 @@ class TriangleGene {
 
         this.g =
             this.clamp(
-                g,
+                Number(g) || 0,
                 0,
                 255
             );
@@ -835,7 +1131,7 @@ class TriangleGene {
 
         this.b =
             this.clamp(
-                b,
+                Number(b) || 0,
                 0,
                 255
             );
@@ -843,13 +1139,28 @@ class TriangleGene {
 
         this.a =
             this.clamp(
-                a,
+                Number(a),
                 0.01,
                 1
             );
 
 
         return this;
+    }
+
+
+
+    /* =====================================================
+       AMERICAN SPELLING ALIAS
+       ===================================================== */
+
+    setColor(
+        ...argumentsList
+    ) {
+
+        return this.setColour(
+            ...argumentsList
+        );
     }
 
 
@@ -863,6 +1174,12 @@ class TriangleGene {
         x,
         y
     ) {
+
+        index =
+            Math.floor(
+                Number(index)
+            );
+
 
         if (
             index < 0 ||
@@ -878,19 +1195,54 @@ class TriangleGene {
 
             x:
                 this.clamp(
-                    x,
+                    Number(x) || 0,
                     0,
                     this.width
                 ),
 
             y:
                 this.clamp(
-                    y,
+                    Number(y) || 0,
                     0,
                     this.height
                 )
 
         };
+
+
+        return true;
+    }
+
+
+
+    /* =====================================================
+       SET POINTS
+       ===================================================== */
+
+    setPoints(points) {
+
+        if (
+            !Array.isArray(points) ||
+            points.length <
+            3
+        ) {
+
+            return false;
+        }
+
+
+        for (
+            let i = 0;
+            i < 3;
+            i++
+        ) {
+
+            this.setPoint(
+                i,
+                points[i].x,
+                points[i].y
+            );
+        }
 
 
         return true;
@@ -915,10 +1267,6 @@ class TriangleGene {
         const p3 =
             this.points[2];
 
-
-        /*
-         * Shoelace formula.
-         */
 
         return Math.abs(
 
@@ -979,21 +1327,96 @@ class TriangleGene {
 
 
     /* =====================================================
+       BOUNDING BOX
+       ===================================================== */
+
+    getBounds() {
+
+        const xs =
+            this.points.map(
+                point =>
+                    point.x
+            );
+
+
+        const ys =
+            this.points.map(
+                point =>
+                    point.y
+            );
+
+
+        const minimumX =
+            Math.min(
+                ...xs
+            );
+
+
+        const maximumX =
+            Math.max(
+                ...xs
+            );
+
+
+        const minimumY =
+            Math.min(
+                ...ys
+            );
+
+
+        const maximumY =
+            Math.max(
+                ...ys
+            );
+
+
+        return {
+
+            x:
+                minimumX,
+
+            y:
+                minimumY,
+
+            width:
+                maximumX -
+                minimumX,
+
+            height:
+                maximumY -
+                minimumY,
+
+            minX:
+                minimumX,
+
+            maxX:
+                maximumX,
+
+            minY:
+                minimumY,
+
+            maxY:
+                maximumY
+
+        };
+    }
+
+
+
+    /* =====================================================
        CLONE
        ===================================================== */
 
     clone() {
 
-        /*
-         * Don't call the constructor here because doing so
-         * would generate random data that we immediately
-         * overwrite.
-         */
-
         const clone =
             Object.create(
                 TriangleGene.prototype
             );
+
+
+        clone.type =
+            "triangle";
 
 
         clone.width =
@@ -1004,33 +1427,18 @@ class TriangleGene {
             this.height;
 
 
-        clone.points = [
+        clone.points =
+            this.points.map(
+                point => ({
 
-            {
-                x:
-                    this.points[0].x,
+                    x:
+                        point.x,
 
-                y:
-                    this.points[0].y
-            },
+                    y:
+                        point.y
 
-            {
-                x:
-                    this.points[1].x,
-
-                y:
-                    this.points[1].y
-            },
-
-            {
-                x:
-                    this.points[2].x,
-
-                y:
-                    this.points[2].y
-            }
-
-        ];
+                })
+            );
 
 
         clone.r =
@@ -1078,18 +1486,26 @@ class TriangleGene {
         width =
             Math.max(
                 1,
-                Math.floor(width)
+                Math.floor(
+                    Number(width) || 1
+                )
             );
 
 
         height =
             Math.max(
                 1,
-                Math.floor(height)
+                Math.floor(
+                    Number(height) || 1
+                )
             );
 
 
-        if (scalePoints) {
+        if (
+            scalePoints &&
+            this.width > 0 &&
+            this.height > 0
+        ) {
 
             const scaleX =
                 width /
@@ -1188,7 +1604,7 @@ class TriangleGene {
 
 
     /* =====================================================
-       TO CSS COLOUR
+       CSS COLOUR
        ===================================================== */
 
     toCSSColour() {
@@ -1209,7 +1625,231 @@ class TriangleGene {
 
 
     /* =====================================================
-       UTILITY
+       JSON EXPORT
+
+       Shape order is handled by Genome. This object only
+       serialises this triangle's own state.
+       ===================================================== */
+
+    toJSON() {
+
+        return {
+
+            type:
+                "triangle",
+
+            points:
+                this.points.map(
+                    point => ({
+
+                        x:
+                            point.x,
+
+                        y:
+                            point.y
+
+                    })
+                ),
+
+            r:
+                this.r,
+
+            g:
+                this.g,
+
+            b:
+                this.b,
+
+            a:
+                this.a
+
+        };
+    }
+
+
+
+    /* =====================================================
+       JSON IMPORT
+       ===================================================== */
+
+    static fromJSON(
+        data,
+        width = 480,
+        height = 715
+    ) {
+
+        if (!data) {
+
+            throw new Error(
+                "TriangleGene.fromJSON requires triangle data."
+            );
+        }
+
+
+        /*
+         * Allow dimensions to be stored in the data as
+         * well as supplied by Genome.
+         */
+
+        width =
+            Number(
+                data.width ??
+                width
+            ) ||
+            480;
+
+
+        height =
+            Number(
+                data.height ??
+                height
+            ) ||
+            715;
+
+
+        const triangle =
+            new TriangleGene({
+
+                width:
+                    width,
+
+                height:
+                    height
+
+            });
+
+
+        triangle.type =
+            "triangle";
+
+
+        const sourcePoints =
+            data.points ??
+            data.vertices;
+
+
+        if (
+            Array.isArray(
+                sourcePoints
+            ) &&
+            sourcePoints.length >=
+            3
+        ) {
+
+            triangle.points =
+                sourcePoints
+                    .slice(
+                        0,
+                        3
+                    )
+                    .map(
+                        point => ({
+
+                            x:
+                                triangle.clamp(
+                                    Number(
+                                        point.x
+                                    ) || 0,
+                                    0,
+                                    triangle.width
+                                ),
+
+                            y:
+                                triangle.clamp(
+                                    Number(
+                                        point.y
+                                    ) || 0,
+                                    0,
+                                    triangle.height
+                                )
+
+                        })
+                    );
+        }
+
+
+        triangle.r =
+            triangle.clamp(
+                Number(
+                    data.r
+                ) || 0,
+                0,
+                255
+            );
+
+
+        triangle.g =
+            triangle.clamp(
+                Number(
+                    data.g
+                ) || 0,
+                0,
+                255
+            );
+
+
+        triangle.b =
+            triangle.clamp(
+                Number(
+                    data.b
+                ) || 0,
+                0,
+                255
+            );
+
+
+        /*
+         * Do not use:
+         *
+         * Number(data.a) || default
+         *
+         * because an explicit zero should be handled
+         * deliberately rather than treated as missing.
+         */
+
+        const alpha =
+            Number(
+                data.a
+            );
+
+
+        triangle.a =
+            triangle.clamp(
+                Number.isFinite(
+                    alpha
+                )
+                    ? alpha
+                    : 0.1,
+                0.01,
+                1
+            );
+
+
+        triangle.constrainToCanvas();
+
+
+        return triangle;
+    }
+
+
+
+    /* =====================================================
+       RANDOM SIGNED NUMBER
+       ===================================================== */
+
+    randomSigned() {
+
+        return (
+            Math.random() *
+            2 -
+            1
+        );
+    }
+
+
+
+    /* =====================================================
+       CLAMP
        ===================================================== */
 
     clamp(
@@ -1217,6 +1857,18 @@ class TriangleGene {
         minimum,
         maximum
     ) {
+
+        value =
+            Number(value);
+
+
+        if (
+            !Number.isFinite(value)
+        ) {
+
+            return minimum;
+        }
+
 
         return Math.max(
             minimum,

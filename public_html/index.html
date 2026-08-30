@@ -1,947 +1,1421 @@
 <!DOCTYPE html>
 <html lang="en">
 
-<head>
+    <head>
 
-    <meta charset="UTF-8">
+        <meta charset="UTF-8">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>Evolve Mona Lisa | Midlife Programmer</title>
-
-    <link
-        rel="stylesheet"
-        href="css/style.css"
-    >
-
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-
-</head>
-
-
-<body>
-
-
-<!-- =========================================================
-     HEADER
-     ========================================================= -->
-
-<header class="site-header">
-
-    <div class="header-inner">
-
-        <a
-            class="logo"
-            href="../../index.html"
-        >
-            <span class="logo-mark">&lt;/&gt;</span>
-            <span>Midlife Programmer</span>
-        </a>
-
-
-        <nav>
-
-            <a href="../../index.html#projects">
-                Projects
-            </a>
-
-            <a href="../../index.html#about">
-                About
-            </a>
-
-            <a href="../../blog.html">
-                Blog
-            </a>
-
-            <a
-                href="https://github.com/"
-                target="_blank"
-                rel="noopener"
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0"
             >
-                GitHub
-            </a>
 
-        </nav>
+        <meta
+            name="description"
+            content="Evolve images using genetic algorithms, translucent geometric shapes and progressive fitness evaluation."
+            >
 
-    </div>
+        <title>
+            Evolve Mona Lisa | Midlife Programmer
+        </title>
 
-</header>
+        <link
+            rel="stylesheet"
+            href="css/style.css"
+            >
 
-
-
-<!-- =========================================================
-     MAIN
-     ========================================================= -->
-
-<main>
-
-
-    <!-- =====================================================
-         INTRODUCTION
-         ===================================================== -->
-
-    <section class="project-intro">
-
-        <p class="eyebrow">
-            GENETIC ALGORITHMS • IMAGE APPROXIMATION • EVOLUTION
-        </p>
-
-        <h1>
-            Evolve <span>Mona Lisa</span>
-        </h1>
-
-        <p class="intro-description">
-            Reconstruct an image using nothing but translucent triangles
-            and evolutionary computation. Random mutations compete against
-            one another as the algorithm gradually searches for a closer
-            approximation of the target image.
-        </p>
-
-    </section>
+    </head>
 
 
-
-    <!-- =====================================================
-         MAIN WORKSPACE
-         ===================================================== -->
-
-    <section class="workspace">
+    <body>
 
 
-        <!-- =================================================
-             PARAMETERS
-             ================================================= -->
+        <!-- ==================================================
+             HEADER
+             ================================================== -->
 
-        <aside class="control-panel">
+        <header class="site-header">
 
-            <div class="panel-heading">
+            <div class="header-inner">
 
-                <span class="panel-number">
-                    01
-                </span>
-
-                <h2>
-                    Evolution
-                </h2>
-
-            </div>
-
-
-
-            <!-- TARGET IMAGE -->
-
-            <div class="control-group">
-
-                <label>
-                    Target Image
-                </label>
-
-                <div class="target-thumbnail">
-
-                    <img
-                        id="targetThumbnail"
-                        src="images/mona_lisa_web_480px.jpg"
-                        alt="Target image"
+                <a
+                    href="../../index.html"
+                    class="site-logo"
                     >
+                    <span class="logo-mark">&gt;_</span>
 
+                    <span class="logo-text">
+                        Midlife Programmer
+                    </span>
+                </a>
+
+
+                <nav class="main-nav">
+
+                    <a href="../../index.html">
+                        Home
+                    </a>
+
+                    <a href="../../projects.html">
+                        Projects
+                    </a>
+
+                    <a href="../../blog.html">
+                        Blog
+                    </a>
+
+                </nav>
+
+            </div>
+
+        </header>
+
+
+
+        <!-- ==================================================
+             MAIN
+             ================================================== -->
+
+        <main>
+
+
+            <!-- ==============================================
+                 INTRO
+                 ============================================== -->
+
+            <section class="intro-section">
+
+                <div class="section-label">
+                    GENETIC ALGORITHMS • EVOLUTIONARY ART • IMAGE APPROXIMATION
                 </div>
 
-                <input
-                    id="imageUpload"
-                    class="file-input"
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                >
+                <h1>
+                    Evolve Mona Lisa
+                </h1>
 
-                <label
-                    for="imageUpload"
-                    class="button secondary full-width upload-button"
-                >
-                    Replace Image
-                </label>
+                <p class="intro-text">
+                    Approximate an image using an evolving stack of
+                    translucent triangles, circles and detail dots.
+                    Candidate images are repeatedly mutated, rendered
+                    and compared with the target until increasingly
+                    accurate compositions emerge.
+                </p>
 
-            </div>
+            </section>
 
 
 
-            <div class="control-divider"></div>
+            <!-- ==============================================
+                 APPLICATION WORKSPACE
+                 ============================================== -->
 
+            <section class="workspace">
 
 
-            <!-- TRIANGLE COUNT -->
+                <!-- ==========================================
+                     CONTROL PANEL
+                     ========================================== -->
 
-            <div class="control-group">
+                <aside class="control-panel">
 
-                <label for="triangleCount">
 
-                    Starting Triangles
+                    <div class="panel-heading">
 
-                    <span id="triangleCountValue">
-                        100
-                    </span>
-
-                </label>
-
-                <input
-                    id="triangleCount"
-                    type="range"
-                    min="10"
-                    max="500"
-                    step="10"
-                    value="100"
-                >
-
-            </div>
-
-
-
-            <!-- POPULATION SIZE -->
-
-            <div class="control-group">
-
-                <label for="populationSize">
-
-                    Population
-
-                    <span id="populationSizeValue">
-                        30
-                    </span>
-
-                </label>
-
-                <input
-                    id="populationSize"
-                    type="range"
-                    min="5"
-                    max="100"
-                    step="5"
-                    value="30"
-                >
-
-            </div>
-
-
-
-            <!-- MUTATIONS -->
-
-            <div class="control-group">
-
-                <label for="mutationsPerChild">
-
-                    Mutations / Child
-
-                    <span id="mutationsPerChildValue">
-                        2
-                    </span>
-
-                </label>
-
-                <input
-                    id="mutationsPerChild"
-                    type="range"
-                    min="1"
-                    max="20"
-                    step="1"
-                    value="2"
-                >
-
-            </div>
-
-
-
-            <!-- MUTATION STRENGTH -->
-
-            <div class="control-group">
-
-                <label for="mutationStrength">
-
-                    Mutation Strength
-
-                    <span id="mutationStrengthValue">
-                        15%
-                    </span>
-
-                </label>
-
-                <input
-                    id="mutationStrength"
-                    type="range"
-                    min="1"
-                    max="100"
-                    step="1"
-                    value="15"
-                >
-
-            </div>
-
-
-
-            <!-- GENERATIONS PER FRAME -->
-
-            <div class="control-group">
-
-                <label for="evolutionSpeed">
-
-                    Generations / Frame
-
-                    <span id="evolutionSpeedValue">
-                        1
-                    </span>
-
-                </label>
-
-                <input
-                    id="evolutionSpeed"
-                    type="range"
-                    min="1"
-                    max="50"
-                    step="1"
-                    value="1"
-                >
-
-            </div>
-
-
-
-            <!-- BACKGROUND -->
-
-            <div class="control-group">
-
-                <label for="backgroundMode">
-                    Background
-                </label>
-
-                <select id="backgroundMode">
-
-                    <option value="average" selected>
-                        Target average colour
-                    </option>
-
-                    <option value="black">
-                        Black
-                    </option>
-
-                    <option value="white">
-                        White
-                    </option>
-
-                    <option value="random">
-                        Random
-                    </option>
-
-                </select>
-
-            </div>
-
-
-
-            <!-- START -->
-
-            <button
-                id="startButton"
-                class="button primary full-width"
-            >
-                Start Evolution
-            </button>
-
-        </aside>
-
-
-
-        <!-- =================================================
-             VISUALISER
-             ================================================= -->
-
-        <section class="visualiser-panel">
-
-
-            <!-- HEADER -->
-
-            <div class="visualiser-header">
-
-                <div>
-
-                    <p class="panel-label">
-                        CURRENT BEST GENOME
-                    </p>
-
-                    <h2 id="visualisationTitle">
-                        Evolution Preview
-                    </h2>
-
-                </div>
-
-
-
-                <div class="simulation-stats">
-
-                    <div>
-
-                        <span>
-                            SIMILARITY
+                        <span class="panel-number">
+                            01
                         </span>
 
-                        <strong id="similarityStat">
-                            0.00%
-                        </strong>
+                        <div>
 
-                    </div>
+                            <div class="panel-title">
+                                Evolution Controls
+                            </div>
 
+                            <div class="panel-subtitle">
+                                Configure the genetic search
+                            </div>
 
-                    <div>
-
-                        <span>
-                            GENERATION
-                        </span>
-
-                        <strong id="generationStat">
-                            0
-                        </strong>
-
-                    </div>
-
-
-                    <div>
-
-                        <span>
-                            ATTEMPTS
-                        </span>
-
-                        <strong id="attemptStat">
-                            0
-                        </strong>
-
-                    </div>
-
-
-                    <div>
-
-                        <span>
-                            TRIANGLES
-                        </span>
-
-                        <strong id="triangleStat">
-                            100
-                        </strong>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-
-            <!-- IMAGE COMPARISON -->
-
-            <div class="comparison-workspace">
-
-
-                <!-- TARGET -->
-
-                <div class="image-stage">
-
-                    <div class="stage-heading">
-
-                        <span>
-                            TARGET
-                        </span>
-
-                        <strong>
-                            Reference Image
-                        </strong>
-
-                    </div>
-
-
-                    <div class="target-display">
-
-                        <img
-                            id="targetImage"
-                            src="images/mona_lisa_web_480px.jpg"
-                            alt="Target Mona Lisa"
-                        >
-
-                    </div>
-
-                </div>
-
-
-
-                <!-- EVOLVED -->
-
-                <div class="image-stage evolved-stage">
-
-                    <div class="stage-heading">
-
-                        <span>
-                            EVOLVED
-                        </span>
-
-                        <strong>
-                            Best Genome
-                        </strong>
-
-                    </div>
-
-
-                    <div class="canvas-container">
-
-                        <canvas
-                            id="evolutionCanvas"
-                            width="480"
-                            height="715"
-                        ></canvas>
-
-
-                        <div
-                            class="canvas-message"
-                            id="canvasMessage"
-                        >
-                            Press Start Evolution to begin.
                         </div>
 
                     </div>
 
+
+
+                    <!-- ======================================
+                         TARGET IMAGE
+                         ====================================== -->
+
+                    <div class="control-section">
+
+                        <div class="control-section-title">
+                            Target Image
+                        </div>
+
+
+                        <div class="target-thumbnail-wrap">
+
+                            <img
+                                id="targetThumbnail"
+                                class="target-thumbnail"
+                                src="images/mona_lisa_web_480px.jpg"
+                                alt="Current target image"
+                                >
+
+                        </div>
+
+
+                        <label
+                            for="imageUpload"
+                            class="file-button"
+                            >
+                            Replace Image
+                        </label>
+
+
+                        <input
+                            id="imageUpload"
+                            class="file-input"
+                            type="file"
+                            accept="image/*"
+                            >
+
+                    </div>
+
+
+
+                    <!-- ======================================
+                         SHAPES
+                         ====================================== -->
+
+                    <div class="control-section">
+
+                        <div class="control-section-title">
+                            Shape Genome
+                        </div>
+
+
+                        <!-- TRIANGLES -->
+
+                        <div class="control-group">
+
+                            <div class="control-label-row">
+
+                                <label for="triangleCount">
+                                    Triangles
+                                </label>
+
+                                <span
+                                    id="triangleCountValue"
+                                    class="control-value"
+                                    >
+                                    100
+                                </span>
+
+                            </div>
+
+                            <input
+                                id="triangleCount"
+                                type="range"
+                                min="10"
+                                max="300"
+                                step="5"
+                                value="100"
+                                >
+
+                        </div>
+
+
+                        <!-- CIRCLES -->
+
+                        <div class="control-group">
+
+                            <div class="control-label-row">
+
+                                <label for="circleCount">
+                                    Circles
+                                </label>
+
+                                <span
+                                    id="circleCountValue"
+                                    class="control-value"
+                                    >
+                                    40
+                                </span>
+
+                            </div>
+
+                            <input
+                                id="circleCount"
+                                type="range"
+                                min="0"
+                                max="150"
+                                step="5"
+                                value="40"
+                                >
+
+                        </div>
+
+
+                        <!-- DOTS -->
+
+                        <div class="control-group">
+
+                            <div class="control-label-row">
+
+                                <label for="dotCount">
+                                    Detail Dots
+                                </label>
+
+                                <span
+                                    id="dotCountValue"
+                                    class="control-value"
+                                    >
+                                    25
+                                </span>
+
+                            </div>
+
+                            <input
+                                id="dotCount"
+                                type="range"
+                                min="0"
+                                max="200"
+                                step="5"
+                                value="25"
+                                >
+
+                        </div>
+
+
+                        <!-- TOTAL -->
+
+                        <div class="shape-total">
+
+                            <span>
+                                Total Shapes
+                            </span>
+
+                            <strong id="totalShapeValue">
+                                165
+                            </strong>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- ======================================
+                         GENETIC ALGORITHM
+                         ====================================== -->
+
+                    <div class="control-section">
+
+                        <div class="control-section-title">
+                            Genetic Algorithm
+                        </div>
+
+
+                        <!-- POPULATION -->
+
+                        <div class="control-group">
+
+                            <div class="control-label-row">
+
+                                <label for="populationSize">
+                                    Population
+                                </label>
+
+                                <span
+                                    id="populationSizeValue"
+                                    class="control-value"
+                                    >
+                                    30
+                                </span>
+
+                            </div>
+
+                            <input
+                                id="populationSize"
+                                type="range"
+                                min="5"
+                                max="100"
+                                step="5"
+                                value="30"
+                                >
+
+                        </div>
+
+
+                        <!-- MUTATIONS -->
+
+                        <div class="control-group">
+
+                            <div class="control-label-row">
+
+                                <label for="mutationsPerChild">
+                                    Mutations / Child
+                                </label>
+
+                                <span
+                                    id="mutationsPerChildValue"
+                                    class="control-value"
+                                    >
+                                    2
+                                </span>
+
+                            </div>
+
+                            <input
+                                id="mutationsPerChild"
+                                type="range"
+                                min="1"
+                                max="15"
+                                step="1"
+                                value="2"
+                                >
+
+                        </div>
+
+
+                        <!-- STRENGTH -->
+
+                        <div class="control-group">
+
+                            <div class="control-label-row">
+
+                                <label for="mutationStrength">
+                                    Mutation Strength
+                                </label>
+
+                                <span
+                                    id="mutationStrengthValue"
+                                    class="control-value"
+                                    >
+                                    15%
+                                </span>
+
+                            </div>
+
+                            <input
+                                id="mutationStrength"
+                                type="range"
+                                min="1"
+                                max="50"
+                                step="1"
+                                value="15"
+                                >
+
+                        </div>
+
+
+                        <!-- SPEED -->
+
+                        <div class="control-group">
+
+                            <div class="control-label-row">
+
+                                <label for="evolutionSpeed">
+                                    Generations / Frame
+                                </label>
+
+                                <span
+                                    id="evolutionSpeedValue"
+                                    class="control-value"
+                                    >
+                                    1
+                                </span>
+
+                            </div>
+
+                            <input
+                                id="evolutionSpeed"
+                                type="range"
+                                min="1"
+                                max="20"
+                                step="1"
+                                value="1"
+                                >
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- ======================================
+                         OPTIMISATION
+                         ====================================== -->
+
+                    <div class="control-section">
+
+                        <div class="control-section-title">
+                            Evolution Optimisation
+                        </div>
+
+
+                        <label class="switch-row">
+
+                            <span class="switch-copy">
+
+                                <span class="switch-title">
+                                    Progressive Resolution
+                                </span>
+
+                                <span class="switch-description">
+                                    Begin with low-resolution fitness evaluation
+                                </span>
+
+                            </span>
+
+                            <span class="switch">
+
+                                <input
+                                    id="progressiveResolution"
+                                    type="checkbox"
+                                    checked
+                                    >
+
+                                <span class="switch-slider"></span>
+
+                            </span>
+
+                        </label>
+
+
+                        <label class="switch-row">
+
+                            <span class="switch-copy">
+
+                                <span class="switch-title">
+                                    Adaptive Mutation
+                                </span>
+
+                                <span class="switch-description">
+                                    Reduce mutation size as accuracy improves
+                                </span>
+
+                            </span>
+
+                            <span class="switch">
+
+                                <input
+                                    id="adaptiveMutation"
+                                    type="checkbox"
+                                    checked
+                                    >
+
+                                <span class="switch-slider"></span>
+
+                            </span>
+
+                        </label>
+
+
+                        <label class="switch-row">
+
+                            <span class="switch-copy">
+
+                                <span class="switch-title">
+                                    Error-Guided Mutation
+                                </span>
+
+                                <span class="switch-description">
+                                    Focus mutations on inaccurate image regions
+                                </span>
+
+                            </span>
+
+                            <span class="switch">
+
+                                <input
+                                    id="errorGuidedMutation"
+                                    type="checkbox"
+                                    checked
+                                    >
+
+                                <span class="switch-slider"></span>
+
+                            </span>
+
+                        </label>
+
+
+
+                        <!-- BACKGROUND -->
+
+                        <div class="control-group control-group-last">
+
+                            <label
+                                class="select-label"
+                                for="backgroundMode"
+                                >
+                                Background
+                            </label>
+
+                            <select id="backgroundMode">
+
+                                <option
+                                    value="average"
+                                    selected
+                                    >
+                                    Target average colour
+                                </option>
+
+                                <option value="black">
+                                    Black
+                                </option>
+
+                                <option value="white">
+                                    White
+                                </option>
+
+                                <option value="random">
+                                    Random
+                                </option>
+
+                            </select>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- ======================================
+                         START
+                         ====================================== -->
+
+                    <button
+                        id="startButton"
+                        class="primary-button"
+                        type="button"
+                        >
+                        Start Evolution
+                    </button>
+
+
+                </aside>
+
+
+
+                <!-- ==========================================
+                     VISUALISER
+                     ========================================== -->
+
+                <section class="visualizer-panel">
+
+
+                    <!-- ======================================
+                         TOP STATUS
+                         ====================================== -->
+
+                    <div class="visualizer-header">
+
+                        <div class="status-item">
+
+                            <span class="status-label">
+                                SIMILARITY
+                            </span>
+
+                            <strong
+                                id="similarityStat"
+                                class="status-value"
+                                >
+                                0.00%
+                            </strong>
+
+                        </div>
+
+
+                        <div class="status-item">
+
+                            <span class="status-label">
+                                GENERATION
+                            </span>
+
+                            <strong
+                                id="generationStat"
+                                class="status-value"
+                                >
+                                0
+                            </strong>
+
+                        </div>
+
+
+                        <div class="status-item">
+
+                            <span class="status-label">
+                                ATTEMPTS
+                            </span>
+
+                            <strong
+                                id="attemptStat"
+                                class="status-value"
+                                >
+                                0
+                            </strong>
+
+                        </div>
+
+
+                        <div class="status-item">
+
+                            <span class="status-label">
+                                SHAPES
+                            </span>
+
+                            <strong
+                                id="triangleStat"
+                                class="status-value"
+                                >
+                                165
+                            </strong>
+
+                        </div>
+
+
+                        <div class="status-item">
+
+                            <span class="status-label">
+                                FITNESS STAGE
+                            </span>
+
+                            <strong
+                                id="resolutionStat"
+                                class="status-value status-value-small"
+                                >
+                                60 × 89
+                            </strong>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- ======================================
+                         IMAGES
+                         ====================================== -->
+
+                    <div class="image-comparison">
+
+
+                        <!-- TARGET -->
+
+                        <div class="image-column">
+
+                            <div class="image-heading">
+
+                                <span class="image-heading-index">
+                                    A
+                                </span>
+
+                                <span>
+                                    Target
+                                </span>
+
+                            </div>
+
+
+                            <div class="image-frame">
+
+                                <img
+                                    id="targetImage"
+                                    src="images/mona_lisa_web_480px.jpg"
+                                    alt="Target Mona Lisa"
+                                    >
+
+                            </div>
+
+                        </div>
+
+
+
+                        <!-- EVOLVED -->
+
+                        <div class="image-column">
+
+                            <div class="image-heading">
+
+                                <span class="image-heading-index">
+                                    B
+                                </span>
+
+                                <span>
+                                    Best Evolved Genome
+                                </span>
+
+                            </div>
+
+
+                            <div class="image-frame canvas-frame">
+
+                                <canvas
+                                    id="evolutionCanvas"
+                                    width="480"
+                                    height="715"
+                                    ></canvas>
+
+
+                                <div
+                                    id="canvasMessage"
+                                    class="canvas-message"
+                                    >
+                                    Press Start Evolution to begin.
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                    </div>
+
+
+
+                    <!-- ======================================
+                         PLAYBACK CONTROLS
+                         ====================================== -->
+
+                    <div class="playback-controls">
+
+                        <button
+                            id="resumeButton"
+                            class="control-button"
+                            type="button"
+                            >
+                            Start
+                        </button>
+
+
+                        <button
+                            id="pauseButton"
+                            class="control-button"
+                            type="button"
+                            >
+                            Pause
+                        </button>
+
+
+                        <button
+                            id="stepButton"
+                            class="control-button"
+                            type="button"
+                            >
+                            Step Generation
+                        </button>
+
+
+                        <button
+                            id="resetButton"
+                            class="control-button danger-button"
+                            type="button"
+                            >
+                            Reset
+                        </button>
+
+                    </div>
+
+
+
+                    <!-- ======================================
+                         EVOLUTION DATA
+                         ====================================== -->
+
+                    <div class="evolution-data">
+
+
+                        <div class="metric-card metric-card-wide">
+
+                            <span class="metric-label">
+                                BEST SIMILARITY
+                            </span>
+
+                            <strong
+                                id="similarityLarge"
+                                class="metric-value metric-value-large"
+                                >
+                                0.00%
+                            </strong>
+
+
+                            <div class="progress-track">
+
+                                <div
+                                    id="similarityBar"
+                                    class="progress-fill"
+                                    ></div>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="metric-card">
+
+                            <span class="metric-label">
+                                BEST FITNESS
+                            </span>
+
+                            <strong
+                                id="fitnessStat"
+                                class="metric-value"
+                                >
+                                —
+                            </strong>
+
+                        </div>
+
+
+                        <div class="metric-card">
+
+                            <span class="metric-label">
+                                GENERATION
+                            </span>
+
+                            <strong
+                                id="generationLarge"
+                                class="metric-value"
+                                >
+                                0
+                            </strong>
+
+                        </div>
+
+
+                        <div class="metric-card">
+
+                            <span class="metric-label">
+                                EVALUATIONS
+                            </span>
+
+                            <strong
+                                id="evaluationStat"
+                                class="metric-value"
+                                >
+                                0
+                            </strong>
+
+                        </div>
+
+
+                        <div class="metric-card">
+
+                            <span class="metric-label">
+                                RESOLUTION
+                            </span>
+
+                            <strong
+                                id="resolutionLarge"
+                                class="metric-value"
+                                >
+                                60 × 89
+                            </strong>
+
+                        </div>
+
+
+                        <div class="metric-card">
+
+                            <span class="metric-label">
+                                IMPROVEMENTS
+                            </span>
+
+                            <strong
+                                id="improvementStat"
+                                class="metric-value"
+                                >
+                                0
+                            </strong>
+
+                        </div>
+
+
+                    </div>
+
+
+
+                    <!-- ======================================
+                         EXPORT
+                         ====================================== -->
+
+                    <section class="export-panel">
+
+                        <div class="export-heading">
+
+                            <div>
+
+                                <div class="export-title">
+                                    Export Genome
+                                </div>
+
+                                <p class="export-description">
+                                    Save the final image, preserve every evolved
+                                    shape, or replay the finished genome as an
+                                    animation.
+                                </p>
+
+                            </div>
+
+
+                            <div
+                                id="exportStatus"
+                                class="export-status"
+                                >
+                                NO GENOME YET
+                            </div>
+
+                        </div>
+
+
+
+                        <!-- EXPORT BUTTONS -->
+
+                        <div class="export-buttons">
+
+                            <button
+                                id="downloadButton"
+                                class="export-button"
+                                type="button"
+                                >
+                                <span class="export-button-type">
+                                    PNG
+                                </span>
+
+                                <span class="export-button-text">
+                                    Download Image
+                                </span>
+                            </button>
+
+
+                            <button
+                                id="downloadJsonButton"
+                                class="export-button"
+                                type="button"
+                                >
+                                <span class="export-button-type">
+                                    JSON
+                                </span>
+
+                                <span class="export-button-text">
+                                    Download Shape Data
+                                </span>
+                            </button>
+
+
+                            <button
+                                id="downloadGifButton"
+                                class="export-button"
+                                type="button"
+                                >
+                                <span class="export-button-type">
+                                    GIF
+                                </span>
+
+                                <span class="export-button-text">
+                                    Download Animation
+                                </span>
+                            </button>
+
+                        </div>
+
+
+
+                        <!-- GIF SETTINGS -->
+
+                        <div class="export-settings">
+
+
+                            <div class="export-setting">
+
+                                <label for="gifMode">
+                                    GIF Animation
+                                </label>
+
+                                <select id="gifMode">
+
+                                    <option
+                                        value="build"
+                                        selected
+                                        >
+                                        Build final image
+                                    </option>
+
+                                    <option value="history">
+                                        Evolution history
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+
+
+                            <div class="export-setting">
+
+                                <div class="control-label-row">
+
+                                    <label for="gifFrameDelay">
+                                        Frame Delay
+                                    </label>
+
+                                    <span
+                                        id="gifFrameDelayValue"
+                                        class="control-value"
+                                        >
+                                        40 ms
+                                    </span>
+
+                                </div>
+
+                                <input
+                                    id="gifFrameDelay"
+                                    type="range"
+                                    min="20"
+                                    max="250"
+                                    step="10"
+                                    value="40"
+                                    >
+
+                            </div>
+
+
+
+                            <div class="export-setting">
+
+                                <div class="control-label-row">
+
+                                    <label for="shapesPerFrame">
+                                        Shapes / Frame
+                                    </label>
+
+                                    <span
+                                        id="shapesPerFrameValue"
+                                        class="control-value"
+                                        >
+                                        2
+                                    </span>
+
+                                </div>
+
+                                <input
+                                    id="shapesPerFrame"
+                                    type="range"
+                                    min="1"
+                                    max="20"
+                                    step="1"
+                                    value="2"
+                                    >
+
+                            </div>
+
+
+                        </div>
+
+
+
+                        <!-- JSON IMPORT -->
+
+                        <div class="import-row">
+
+                            <div>
+
+                                <div class="import-title">
+                                    Resume Saved Genome
+                                </div>
+
+                                <div class="import-description">
+                                    Reload previously exported shape data and
+                                    continue evolving it.
+                                </div>
+
+                            </div>
+
+
+                            <label
+                                for="genomeUpload"
+                                class="import-button"
+                                >
+                                Import JSON
+                            </label>
+
+
+                            <input
+                                id="genomeUpload"
+                                class="file-input"
+                                type="file"
+                                accept=".json,application/json"
+                                >
+
+                        </div>
+
+
+                    </section>
+
+
+                </section>
+
+
+            </section>
+
+
+
+            <!-- ==============================================
+                 HOW IT WORKS
+                 ============================================== -->
+
+            <section class="information-section">
+
+                <div class="section-label">
+                    PROCESS
+                </div>
+
+                <h2>
+                    How the Image Evolves
+                </h2>
+
+
+                <div class="process-grid">
+
+
+                    <article class="process-card">
+
+                        <span class="process-number">
+                            01
+                        </span>
+
+                        <h3>
+                            Generate
+                        </h3>
+
+                        <p>
+                            A population of genomes is created from
+                            translucent triangles, circles and detail dots.
+                        </p>
+
+                    </article>
+
+
+                    <article class="process-card">
+
+                        <span class="process-number">
+                            02
+                        </span>
+
+                        <h3>
+                            Render
+                        </h3>
+
+                        <p>
+                            Every genome is rendered in layer order onto an
+                            off-screen canvas to produce a candidate image.
+                        </p>
+
+                    </article>
+
+
+                    <article class="process-card">
+
+                        <span class="process-number">
+                            03
+                        </span>
+
+                        <h3>
+                            Compare
+                        </h3>
+
+                        <p>
+                            Candidate pixels are compared with the target.
+                            Progressive resolution allows early generations
+                            to be evaluated much more quickly.
+                        </p>
+
+                    </article>
+
+
+                    <article class="process-card">
+
+                        <span class="process-number">
+                            04
+                        </span>
+
+                        <h3>
+                            Focus
+                        </h3>
+
+                        <p>
+                            Error-guided mutations can concentrate new
+                            changes in areas where the evolved image differs
+                            most strongly from the target.
+                        </p>
+
+                    </article>
+
+
+                    <article class="process-card">
+
+                        <span class="process-number">
+                            05
+                        </span>
+
+                        <h3>
+                            Select
+                        </h3>
+
+                        <p>
+                            The strongest genomes survive while mutated
+                            descendants compete to replace weaker candidates.
+                        </p>
+
+                    </article>
+
+
+                    <article class="process-card">
+
+                        <span class="process-number">
+                            06
+                        </span>
+
+                        <h3>
+                            Refine
+                        </h3>
+
+                        <p>
+                            Mutation strength falls and fitness resolution
+                            rises as evolution moves from broad composition
+                            towards increasingly fine detail.
+                        </p>
+
+                    </article>
+
+
+                </div>
+
+            </section>
+
+
+
+            <!-- ==============================================
+                 GENOME FORMAT
+                 ============================================== -->
+
+            <section class="genome-info-section">
+
+                <div class="genome-info-copy">
+
+                    <div class="section-label">
+                        GENOME
+                    </div>
+
+                    <h2>
+                        The Artwork Is Data
+                    </h2>
+
+                    <p>
+                        Every evolved image can be represented as an ordered
+                        collection of geometric shapes. Position, size,
+                        colour, transparency and layer order can therefore
+                        be stored independently of the rendered PNG.
+                    </p>
+
                 </div>
 
 
-            </div>
+                <div class="genome-code">
 
+                    <span>{</span>
 
+                    <span class="code-indent">
+                        "type": "circle",
+                    </span>
 
-            <!-- SIMULATION CONTROLS -->
+                    <span class="code-indent">
+                        "x": 242,
+                    </span>
 
-            <div class="simulation-controls">
+                    <span class="code-indent">
+                        "y": 268,
+                    </span>
 
-                <button
-                    id="resumeButton"
-                    class="button primary"
-                >
-                    Start
-                </button>
+                    <span class="code-indent">
+                        "radius": 37,
+                    </span>
 
-                <button
-                    id="pauseButton"
-                    class="button secondary"
-                >
-                    Pause
-                </button>
+                    <span class="code-indent">
+                        "rgba": [181, 139, 74, 0.16]
+                    </span>
 
-                <button
-                    id="stepButton"
-                    class="button secondary"
-                >
-                    Step
-                </button>
-
-                <button
-                    id="resetButton"
-                    class="button secondary"
-                >
-                    Reset
-                </button>
-
-                <button
-                    id="downloadButton"
-                    class="button secondary push-right"
-                >
-                    Save PNG
-                </button>
-
-            </div>
-
-
-        </section>
-
-    </section>
-
-
-
-    <!-- =====================================================
-         FITNESS / PROGRESS
-         ===================================================== -->
-
-    <section class="progress-section">
-
-        <div class="section-heading">
-
-            <span class="panel-number">
-                02
-            </span>
-
-            <div>
-
-                <h2>
-                    Evolution Progress
-                </h2>
-
-                <p>
-                    Statistics from the currently surviving genome.
-                    Fitness improves as the generated image approaches
-                    the target.
-                </p>
-
-            </div>
-
-        </div>
-
-
-
-        <div class="metric-grid">
-
-
-            <!-- SIMILARITY -->
-
-            <div class="metric-card">
-
-                <span class="metric-label">
-                    SIMILARITY
-                </span>
-
-                <strong
-                    id="similarityLarge"
-                    class="metric-value"
-                >
-                    0.00%
-                </strong>
-
-                <div class="progress-track">
-
-                    <div
-                        id="similarityBar"
-                        class="progress-fill"
-                        style="width: 0%"
-                    ></div>
+                    <span>}</span>
 
                 </div>
 
-                <p>
-                    Percentage similarity between the current genome
-                    and target pixels.
-                </p>
+            </section>
+
+
+        </main>
+
+
+
+        <!-- ==================================================
+             FOOTER
+             ================================================== -->
+
+        <footer class="site-footer">
+
+            <div class="footer-inner">
+
+                <div>
+                    Midlife Programmer
+                </div>
+
+                <div class="footer-muted">
+                    Genetic Algorithm Image Approximation
+                </div>
 
             </div>
 
+        </footer>
 
 
-            <!-- FITNESS -->
 
-            <div class="metric-card">
+        <!-- ==================================================
+         JAVASCRIPT
+    
+         IMPORTANT:
+         These are normal browser scripts, so dependency
+         order matters.
+         ================================================== -->
 
-                <span class="metric-label">
-                    BEST FITNESS
-                </span>
+        <!-- Gene classes -->
+        <script src="js/TriangleGene.js"></script>
+        <script src="js/CircleGene.js"></script>
+        <script src="js/DotGene.js"></script>
 
-                <strong
-                    id="fitnessStat"
-                    class="metric-value"
-                >
-                    —
-                </strong>
+        <!-- Genome depends on the gene classes -->
+        <script src="js/Genome.js"></script>
 
-                <p>
-                    Fitness score of the best genome found during
-                    the evolutionary search.
-                </p>
+        <!-- Target image and fitness system -->
+        <script src="js/TargetImage.js"></script>
+        <script src="js/FitnessEvaluator.js"></script>
 
-            </div>
+        <!-- Population creates Genome instances -->
+        <script src="js/Population.js"></script>
 
+        <!-- Renderer is required by the genetic algorithm -->
+        <script src="js/EvolutionRenderer.js"></script>
 
+        <!-- Main evolutionary algorithm -->
+        <script src="js/GeneticAlgorithm.js"></script>
 
-            <!-- GENERATIONS -->
+        <!-- PNG / JSON / GIF export -->
+        <script src="js/ExportManager.js"></script>
 
-            <div class="metric-card">
+        <!-- Application controller must be last -->
+        <script src="js/app.js"></script>
 
-                <span class="metric-label">
-                    GENERATIONS
-                </span>
 
-                <strong
-                    id="generationLarge"
-                    class="metric-value"
-                >
-                    0
-                </strong>
-
-                <p>
-                    Number of complete evolutionary generations
-                    processed.
-                </p>
-
-            </div>
-
-
-
-            <!-- EVALUATIONS -->
-
-            <div class="metric-card">
-
-                <span class="metric-label">
-                    FITNESS EVALUATIONS
-                </span>
-
-                <strong
-                    id="evaluationStat"
-                    class="metric-value"
-                >
-                    0
-                </strong>
-
-                <p>
-                    Number of candidate images compared against
-                    the target.
-                </p>
-
-            </div>
-
-        </div>
-
-    </section>
-
-
-
-    <!-- =====================================================
-         HOW IT WORKS
-         ===================================================== -->
-
-    <section class="process-section">
-
-        <div class="section-heading">
-
-            <span class="panel-number">
-                03
-            </span>
-
-            <div>
-
-                <h2>
-                    Evolutionary Process
-                </h2>
-
-                <p>
-                    Each candidate image is encoded as a genome containing
-                    translucent triangle genes.
-                </p>
-
-            </div>
-
-        </div>
-
-
-
-        <div class="process-grid">
-
-
-            <div class="process-card">
-
-                <span class="process-number">
-                    01
-                </span>
-
-                <h3>
-                    Initialise
-                </h3>
-
-                <p>
-                    Generate a population of genomes containing randomly
-                    positioned and coloured triangles.
-                </p>
-
-            </div>
-
-
-
-            <div class="process-card">
-
-                <span class="process-number">
-                    02
-                </span>
-
-                <h3>
-                    Render
-                </h3>
-
-                <p>
-                    Draw each genome to an off-screen canvas to produce
-                    its image approximation.
-                </p>
-
-            </div>
-
-
-
-            <div class="process-card">
-
-                <span class="process-number">
-                    03
-                </span>
-
-                <h3>
-                    Evaluate
-                </h3>
-
-                <p>
-                    Compare generated pixels against the target image
-                    and calculate a fitness score.
-                </p>
-
-            </div>
-
-
-
-            <div class="process-card">
-
-                <span class="process-number">
-                    04
-                </span>
-
-                <h3>
-                    Mutate
-                </h3>
-
-                <p>
-                    Change triangle positions, colours, opacity and
-                    geometry to create new candidate genomes.
-                </p>
-
-            </div>
-
-
-
-            <div class="process-card">
-
-                <span class="process-number">
-                    05
-                </span>
-
-                <h3>
-                    Select
-                </h3>
-
-                <p>
-                    Keep successful mutations and discard candidates
-                    that produce a worse approximation.
-                </p>
-
-            </div>
-
-
-
-            <div class="process-card">
-
-                <span class="process-number">
-                    06
-                </span>
-
-                <h3>
-                    Repeat
-                </h3>
-
-                <p>
-                    Continue the process for thousands of generations
-                    as increasingly recognisable structure emerges.
-                </p>
-
-            </div>
-
-
-        </div>
-
-    </section>
-
-
-
-    <!-- =====================================================
-         INFORMATION
-         ===================================================== -->
-
-    <section class="information-section">
-
-        <span class="panel-number">
-            04
-        </span>
-
-        <div>
-
-            <h2>
-                Painting With Evolution
-            </h2>
-
-            <p>
-                The algorithm does not know what the Mona Lisa looks like.
-                It does not recognise faces, landscapes, eyes or individual
-                objects. Instead, it treats the target as a collection of
-                coloured pixels.
-            </p>
-
-            <p>
-                A candidate solution consists of many translucent triangles.
-                Their positions, shapes, colours and opacity values form a
-                genome. Small random mutations alter these genes and the
-                resulting image is compared with the target.
-            </p>
-
-            <p>
-                Mutations that improve fitness survive. Poorer mutations are
-                discarded. Repeating this simple process many thousands of
-                times allows recognisable features of the original image to
-                emerge without explicitly drawing any of them.
-            </p>
-
-        </div>
-
-    </section>
-
-
-</main>
-
-
-
-<!-- =========================================================
-     FOOTER
-     ========================================================= -->
-
-<footer>
-
-    <div>
-
-        <strong>
-            Midlife Programmer
-        </strong>
-
-        <p>
-            Software experiments, algorithms and unnecessarily
-            large numbers of pixels.
-        </p>
-
-    </div>
-
-    <p>
-        Built with HTML, CSS, JavaScript and curiosity.
-    </p>
-
-</footer>
-
-
-
-<!-- =========================================================
-     JAVASCRIPT
-     ========================================================= -->
-
-<script src="js/TriangleGene.js"></script>
-<script src="js/Genome.js"></script>
-<script src="js/TargetImage.js"></script>
-<script src="js/FitnessEvaluator.js"></script>
-<script src="js/Population.js"></script>
-<script src="js/GeneticAlgorithm.js"></script>
-<script src="js/EvolutionRenderer.js"></script>
-<script src="js/app.js"></script>
-
-
-</body>
+    </body>
 
 </html>

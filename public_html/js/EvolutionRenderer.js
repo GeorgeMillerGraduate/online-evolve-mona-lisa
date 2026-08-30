@@ -3,10 +3,26 @@
    Evolve Mona Lisa
    EvolutionRenderer.js
 
-   Responsible for rendering a Genome onto a HTML5 canvas.
+   Renders a Genome onto an HTML5 canvas.
 
-   A Genome is represented by a background colour followed by
-   a collection of translucent triangle genes.
+   A Genome now contains an ORDERED stack of:
+
+   - TriangleGene
+   - CircleGene
+   - DotGene
+
+   Shape order is preserved because translucent shapes
+   produce different results depending on drawing order.
+
+   The renderer supports:
+
+   - Visible rendering
+   - Off-screen fitness rendering
+   - Triangle / circle / dot genes
+   - Legacy triangle-only genomes
+   - Rendering partial shape stacks
+   - Rendering individual shapes
+   - PNG export support
    ========================================================= */
 
 
@@ -20,12 +36,16 @@ class EvolutionRenderer {
     constructor(canvas) {
 
         if (!canvas) {
+
             throw new Error(
                 "EvolutionRenderer requires a canvas element."
             );
         }
 
-        this.canvas = canvas;
+
+        this.canvas =
+            canvas;
+
 
         this.ctx =
             this.canvas.getContext(
@@ -35,7 +55,9 @@ class EvolutionRenderer {
                 }
             );
 
+
         if (!this.ctx) {
+
             throw new Error(
                 "Unable to obtain 2D canvas context."
             );
@@ -45,43 +67,56 @@ class EvolutionRenderer {
         this.width =
             this.canvas.width;
 
+
         this.height =
             this.canvas.height;
 
 
-        /*
-         * Temporary off-screen canvas.
-         *
-         * Fitness evaluation may use this later without
-         * interfering with the canvas visible to the user.
-         */
+
+        /* =================================================
+           OFF-SCREEN FITNESS CANVAS
+           ================================================= */
 
         this.bufferCanvas =
-            document.createElement("canvas");
+            document.createElement(
+                "canvas"
+            );
+
 
         this.bufferCanvas.width =
             this.width;
 
+
         this.bufferCanvas.height =
             this.height;
+
 
         this.bufferContext =
             this.bufferCanvas.getContext(
                 "2d",
                 {
+                    alpha: false,
                     willReadFrequently: true
                 }
             );
 
 
-        this.clear();
+        if (!this.bufferContext) {
 
+            throw new Error(
+                "Unable to create off-screen rendering context."
+            );
+        }
+
+
+        this.clear();
+        this.clearBuffer();
     }
 
 
 
     /* =====================================================
-       SIZE
+       RESIZE
        ===================================================== */
 
     resize(width, height) {
@@ -91,6 +126,7 @@ class EvolutionRenderer {
                 1,
                 Math.floor(width)
             );
+
 
         height =
             Math.max(
@@ -102,12 +138,14 @@ class EvolutionRenderer {
         this.width =
             width;
 
+
         this.height =
             height;
 
 
         this.canvas.width =
             width;
+
 
         this.canvas.height =
             height;
@@ -116,45 +154,97 @@ class EvolutionRenderer {
         this.bufferCanvas.width =
             width;
 
+
         this.bufferCanvas.height =
             height;
 
 
         this.clear();
+        this.clearBuffer();
+
+
+        return this;
     }
 
 
 
     /* =====================================================
-       CLEAR
+       CLEAR VISIBLE CANVAS
        ===================================================== */
 
     clear() {
 
-        this.ctx.save();
+        this.clearContext(
+            this.ctx
+        );
+    }
 
-        this.ctx.globalAlpha = 1;
 
-        this.ctx.globalCompositeOperation =
+
+    /* =====================================================
+       CLEAR BUFFER
+       ===================================================== */
+
+    clearBuffer() {
+
+        this.clearContext(
+            this.bufferContext
+        );
+    }
+
+
+
+    /* =====================================================
+       CLEAR CONTEXT
+       ===================================================== */
+
+    clearContext(context) {
+
+        if (!context) {
+            return;
+        }
+
+
+        context.save();
+
+
+        context.setTransform(
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+        );
+
+
+        context.globalAlpha =
+            1;
+
+
+        context.globalCompositeOperation =
             "source-over";
 
-        this.ctx.fillStyle =
+
+        context.fillStyle =
             "#000000";
 
-        this.ctx.fillRect(
+
+        context.fillRect(
             0,
             0,
             this.width,
             this.height
         );
 
-        this.ctx.restore();
+
+        context.restore();
     }
 
 
 
     /* =====================================================
-       RENDER GENOME
+       RENDER GENOME TO VISIBLE CANVAS
        ===================================================== */
 
     render(genome) {
@@ -176,12 +266,15 @@ class EvolutionRenderer {
 
 
     /* =====================================================
-       RENDER TO BUFFER
+       RENDER GENOME TO FITNESS BUFFER
        ===================================================== */
 
     renderToBuffer(genome) {
 
         if (!genome) {
+
+            this.clearBuffer();
+
             return this.bufferCanvas;
         }
 
@@ -198,12 +291,19 @@ class EvolutionRenderer {
 
 
     /* =====================================================
-       CORE RENDERING
+       CORE GENOME RENDERING
        ===================================================== */
 
-    renderToContext(genome, context) {
+    renderToContext(
+        genome,
+        context
+    ) {
 
-        if (!context) {
+        if (
+            !genome ||
+            !context
+        ) {
+
             return;
         }
 
@@ -211,24 +311,10 @@ class EvolutionRenderer {
         context.save();
 
 
-        /*
-         * Reset anything a previous render may have changed.
-         */
-
-        context.setTransform(
-            1,
-            0,
-            0,
-            1,
-            0,
-            0
+        this.resetContext(
+            context
         );
 
-        context.globalAlpha =
-            1;
-
-        context.globalCompositeOperation =
-            "source-over";
 
 
         /* ===============================================
@@ -240,6 +326,7 @@ class EvolutionRenderer {
                 genome
             );
 
+
         context.fillRect(
             0,
             0,
@@ -248,25 +335,26 @@ class EvolutionRenderer {
         );
 
 
+
         /* ===============================================
-           TRIANGLES
+           ORDERED SHAPE STACK
            =============================================== */
 
-        const triangles =
-            this.getTriangles(
+        const shapes =
+            this.getShapes(
                 genome
             );
 
 
         for (
             let i = 0;
-            i < triangles.length;
+            i < shapes.length;
             i++
         ) {
 
-            this.drawTriangle(
+            this.drawShape(
                 context,
-                triangles[i]
+                shapes[i]
             );
         }
 
@@ -277,20 +365,163 @@ class EvolutionRenderer {
 
 
     /* =====================================================
-       GET TRIANGLE ARRAY
+       RENDER ONLY FIRST N SHAPES
+
+       This is useful later for animated GIF export.
+
+       Frame 1  = background + first shapes
+       Frame 2  = more shapes
+       ...
+       Final    = complete genome
        ===================================================== */
 
-    getTriangles(genome) {
+    renderPartial(
+        genome,
+        shapeCount,
+        context = this.ctx
+    ) {
+
+        if (
+            !genome ||
+            !context
+        ) {
+
+            return;
+        }
+
+
+        const shapes =
+            this.getShapes(
+                genome
+            );
+
+
+        shapeCount =
+            Math.max(
+                0,
+                Math.min(
+                    shapes.length,
+                    Math.floor(
+                        shapeCount
+                    )
+                )
+            );
+
+
+        context.save();
+
+
+        this.resetContext(
+            context
+        );
+
+
+        context.fillStyle =
+            this.getBackgroundColour(
+                genome
+            );
+
+
+        context.fillRect(
+            0,
+            0,
+            this.width,
+            this.height
+        );
+
+
+        for (
+            let i = 0;
+            i < shapeCount;
+            i++
+        ) {
+
+            this.drawShape(
+                context,
+                shapes[i]
+            );
+        }
+
+
+        context.restore();
+    }
+
+
+
+    /* =====================================================
+       RENDER PARTIAL TO BUFFER
+       ===================================================== */
+
+    renderPartialToBuffer(
+        genome,
+        shapeCount
+    ) {
+
+        this.renderPartial(
+            genome,
+            shapeCount,
+            this.bufferContext
+        );
+
+
+        return this.bufferCanvas;
+    }
+
+
+
+    /* =====================================================
+       GET SHAPES
+
+       Preferred representation:
+
+           genome.shapes
+
+       Older formats are retained for compatibility.
+       ===================================================== */
+
+    getShapes(genome) {
+
+        if (!genome) {
+            return [];
+        }
+
+
+        /* ===============================================
+           NEW MIXED-SHAPE FORMAT
+           =============================================== */
 
         if (
             Array.isArray(
-                genome.triangles
+                genome.shapes
             )
         ) {
 
-            return genome.triangles;
+            return genome.shapes;
         }
 
+
+        if (
+            typeof genome.getShapes ===
+            "function"
+        ) {
+
+            const result =
+                genome.getShapes();
+
+
+            if (
+                Array.isArray(result)
+            ) {
+
+                return result;
+            }
+        }
+
+
+
+        /* ===============================================
+           GENERIC GENES FORMAT
+           =============================================== */
 
         if (
             Array.isArray(
@@ -303,20 +534,6 @@ class EvolutionRenderer {
 
 
         if (
-            typeof genome.getTriangles ===
-            "function"
-        ) {
-
-            const result =
-                genome.getTriangles();
-
-            return Array.isArray(result)
-                ? result
-                : [];
-        }
-
-
-        if (
             typeof genome.getGenes ===
             "function"
         ) {
@@ -324,9 +541,46 @@ class EvolutionRenderer {
             const result =
                 genome.getGenes();
 
-            return Array.isArray(result)
-                ? result
-                : [];
+
+            if (
+                Array.isArray(result)
+            ) {
+
+                return result;
+            }
+        }
+
+
+
+        /* ===============================================
+           LEGACY TRIANGLE FORMAT
+           =============================================== */
+
+        if (
+            Array.isArray(
+                genome.triangles
+            )
+        ) {
+
+            return genome.triangles;
+        }
+
+
+        if (
+            typeof genome.getTriangles ===
+            "function"
+        ) {
+
+            const result =
+                genome.getTriangles();
+
+
+            if (
+                Array.isArray(result)
+            ) {
+
+                return result;
+            }
         }
 
 
@@ -336,10 +590,310 @@ class EvolutionRenderer {
 
 
     /* =====================================================
+       LEGACY GET TRIANGLES
+       ===================================================== */
+
+    getTriangles(genome) {
+
+        return this.getShapes(
+            genome
+        ).filter(
+            shape =>
+                this.getShapeType(
+                    shape
+                ) ===
+                "triangle"
+        );
+    }
+
+
+
+    /* =====================================================
+       GET CIRCLES
+       ===================================================== */
+
+    getCircles(genome) {
+
+        return this.getShapes(
+            genome
+        ).filter(
+            shape =>
+                this.getShapeType(
+                    shape
+                ) ===
+                "circle"
+        );
+    }
+
+
+
+    /* =====================================================
+       GET DOTS
+       ===================================================== */
+
+    getDots(genome) {
+
+        return this.getShapes(
+            genome
+        ).filter(
+            shape =>
+                this.getShapeType(
+                    shape
+                ) ===
+                "dot"
+        );
+    }
+
+
+
+    /* =====================================================
+       DRAW GENERIC SHAPE
+       ===================================================== */
+
+    drawShape(
+        context,
+        shape
+    ) {
+
+        if (
+            !context ||
+            !shape
+        ) {
+
+            return;
+        }
+
+
+        const type =
+            this.getShapeType(
+                shape
+            );
+
+
+        switch (type) {
+
+            case "triangle":
+
+                this.drawTriangle(
+                    context,
+                    shape
+                );
+
+                break;
+
+
+            case "circle":
+
+                this.drawCircle(
+                    context,
+                    shape
+                );
+
+                break;
+
+
+            case "dot":
+
+                this.drawDot(
+                    context,
+                    shape
+                );
+
+                break;
+
+
+            default:
+
+                /*
+                 * Attempt to infer unknown legacy shapes.
+                 */
+
+                if (
+                    this.looksLikeTriangle(
+                        shape
+                    )
+                ) {
+
+                    this.drawTriangle(
+                        context,
+                        shape
+                    );
+
+                } else if (
+                    this.looksLikeCircle(
+                        shape
+                    )
+                ) {
+
+                    this.drawCircle(
+                        context,
+                        shape
+                    );
+                }
+
+                break;
+        }
+    }
+
+
+
+    /* =====================================================
+       GET SHAPE TYPE
+       ===================================================== */
+
+    getShapeType(shape) {
+
+        if (!shape) {
+            return "unknown";
+        }
+
+
+        if (
+            typeof shape.type ===
+            "string"
+        ) {
+
+            return shape.type.toLowerCase();
+        }
+
+
+        if (
+            typeof TriangleGene !==
+                "undefined" &&
+            shape instanceof
+                TriangleGene
+        ) {
+
+            return "triangle";
+        }
+
+
+        if (
+            typeof CircleGene !==
+                "undefined" &&
+            shape instanceof
+                CircleGene
+        ) {
+
+            return "circle";
+        }
+
+
+        if (
+            typeof DotGene !==
+                "undefined" &&
+            shape instanceof
+                DotGene
+        ) {
+
+            return "dot";
+        }
+
+
+        if (
+            this.looksLikeTriangle(
+                shape
+            )
+        ) {
+
+            return "triangle";
+        }
+
+
+        if (
+            this.looksLikeCircle(
+                shape
+            )
+        ) {
+
+            return "circle";
+        }
+
+
+        return "unknown";
+    }
+
+
+
+    /* =====================================================
+       LOOKS LIKE TRIANGLE
+       ===================================================== */
+
+    looksLikeTriangle(shape) {
+
+        if (!shape) {
+            return false;
+        }
+
+
+        if (
+            Array.isArray(
+                shape.points
+            ) &&
+            shape.points.length >= 3
+        ) {
+
+            return true;
+        }
+
+
+        if (
+            Array.isArray(
+                shape.vertices
+            ) &&
+            shape.vertices.length >= 3
+        ) {
+
+            return true;
+        }
+
+
+        if (
+            Number.isFinite(shape.x1) &&
+            Number.isFinite(shape.y1) &&
+            Number.isFinite(shape.x2) &&
+            Number.isFinite(shape.y2) &&
+            Number.isFinite(shape.x3) &&
+            Number.isFinite(shape.y3)
+        ) {
+
+            return true;
+        }
+
+
+        return Boolean(
+            shape.p1 &&
+            shape.p2 &&
+            shape.p3
+        );
+    }
+
+
+
+    /* =====================================================
+       LOOKS LIKE CIRCLE
+       ===================================================== */
+
+    looksLikeCircle(shape) {
+
+        return Boolean(
+            shape &&
+            Number.isFinite(shape.x) &&
+            Number.isFinite(shape.y) &&
+            Number.isFinite(shape.radius)
+        );
+    }
+
+
+
+    /* =====================================================
        DRAW TRIANGLE
        ===================================================== */
 
-    drawTriangle(context, triangle) {
+    drawTriangle(
+        context,
+        triangle
+    ) {
 
         if (!triangle) {
             return;
@@ -362,8 +916,9 @@ class EvolutionRenderer {
 
 
         const colour =
-            this.getTriangleColour(
-                triangle
+            this.getShapeColour(
+                triangle,
+                0.25
             );
 
 
@@ -404,12 +959,154 @@ class EvolutionRenderer {
 
 
         context.fillStyle =
-            `rgba(
-                ${colour.r},
-                ${colour.g},
-                ${colour.b},
-                ${colour.a}
-            )`;
+            this.colourToCSS(
+                colour
+            );
+
+
+        context.fill();
+    }
+
+
+
+    /* =====================================================
+       DRAW CIRCLE
+       ===================================================== */
+
+    drawCircle(
+        context,
+        circle
+    ) {
+
+        if (!circle) {
+            return;
+        }
+
+
+        const x =
+            this.toCanvasX(
+                Number(circle.x)
+            );
+
+
+        const y =
+            this.toCanvasY(
+                Number(circle.y)
+            );
+
+
+        const radius =
+            this.getCanvasRadius(
+                circle.radius
+            );
+
+
+        if (
+            radius <= 0
+        ) {
+
+            return;
+        }
+
+
+        const colour =
+            this.getShapeColour(
+                circle,
+                0.25
+            );
+
+
+        context.beginPath();
+
+
+        context.arc(
+            x,
+            y,
+            radius,
+            0,
+            Math.PI * 2
+        );
+
+
+        context.closePath();
+
+
+        context.fillStyle =
+            this.colourToCSS(
+                colour
+            );
+
+
+        context.fill();
+    }
+
+
+
+    /* =====================================================
+       DRAW DOT
+
+       DotGene is technically circular, but is kept as a
+       separate method so we can optimise or alter its
+       rendering later without changing CircleGene.
+       ===================================================== */
+
+    drawDot(
+        context,
+        dot
+    ) {
+
+        if (!dot) {
+            return;
+        }
+
+
+        const x =
+            this.toCanvasX(
+                Number(dot.x)
+            );
+
+
+        const y =
+            this.toCanvasY(
+                Number(dot.y)
+            );
+
+
+        const radius =
+            Math.max(
+                0.35,
+                this.getCanvasRadius(
+                    dot.radius
+                )
+            );
+
+
+        const colour =
+            this.getShapeColour(
+                dot,
+                0.5
+            );
+
+
+        context.beginPath();
+
+
+        context.arc(
+            x,
+            y,
+            radius,
+            0,
+            Math.PI * 2
+        );
+
+
+        context.closePath();
+
+
+        context.fillStyle =
+            this.colourToCSS(
+                colour
+            );
 
 
         context.fill();
@@ -423,16 +1120,6 @@ class EvolutionRenderer {
 
     getTrianglePoints(triangle) {
 
-        /*
-         * Preferred representation:
-         *
-         * triangle.points = [
-         *     { x, y },
-         *     { x, y },
-         *     { x, y }
-         * ];
-         */
-
         if (
             Array.isArray(
                 triangle.points
@@ -444,12 +1131,6 @@ class EvolutionRenderer {
         }
 
 
-        /*
-         * Alternative:
-         *
-         * triangle.vertices
-         */
-
         if (
             Array.isArray(
                 triangle.vertices
@@ -460,14 +1141,6 @@ class EvolutionRenderer {
             return triangle.vertices;
         }
 
-
-        /*
-         * Explicit coordinates:
-         *
-         * x1, y1
-         * x2, y2
-         * x3, y3
-         */
 
         if (
             Number.isFinite(triangle.x1) &&
@@ -499,10 +1172,6 @@ class EvolutionRenderer {
         }
 
 
-        /*
-         * Named point objects.
-         */
-
         if (
             triangle.p1 &&
             triangle.p2 &&
@@ -523,101 +1192,126 @@ class EvolutionRenderer {
 
 
     /* =====================================================
-       TRIANGLE COLOUR
+       GENERIC SHAPE COLOUR
+
+       Works for triangles, circles and dots.
        ===================================================== */
 
-    getTriangleColour(triangle) {
+    getShapeColour(
+        shape,
+        defaultAlpha = 0.25
+    ) {
 
         let r = 255;
         let g = 255;
         let b = 255;
-        let a = 0.25;
+        let a = defaultAlpha;
+
 
 
         /* ===============================================
-           colour object
+           BRITISH SPELLING
            =============================================== */
 
-        if (triangle.colour) {
+        if (
+            shape.colour
+        ) {
 
             r =
-                triangle.colour.r ??
+                shape.colour.r ??
                 r;
 
+
             g =
-                triangle.colour.g ??
+                shape.colour.g ??
                 g;
 
+
             b =
-                triangle.colour.b ??
+                shape.colour.b ??
                 b;
 
+
             a =
-                triangle.colour.a ??
+                shape.colour.a ??
+                shape.colour.alpha ??
                 a;
         }
 
 
+
         /* ===============================================
-           American spelling
+           AMERICAN SPELLING
            =============================================== */
 
-        if (triangle.color) {
+        if (
+            shape.color
+        ) {
 
             r =
-                triangle.color.r ??
+                shape.color.r ??
                 r;
 
+
             g =
-                triangle.color.g ??
+                shape.color.g ??
                 g;
 
+
             b =
-                triangle.color.b ??
+                shape.color.b ??
                 b;
 
+
             a =
-                triangle.color.a ??
+                shape.color.a ??
+                shape.color.alpha ??
                 a;
         }
 
 
+
         /* ===============================================
-           Direct properties
+           DIRECT PROPERTIES
            =============================================== */
 
         r =
-            triangle.r ??
-            triangle.red ??
+            shape.r ??
+            shape.red ??
             r;
 
+
         g =
-            triangle.g ??
-            triangle.green ??
+            shape.g ??
+            shape.green ??
             g;
 
+
         b =
-            triangle.b ??
-            triangle.blue ??
+            shape.b ??
+            shape.blue ??
             b;
 
 
         a =
-            triangle.a ??
-            triangle.alpha ??
-            triangle.opacity ??
+            shape.a ??
+            shape.alpha ??
+            shape.opacity ??
             a;
 
 
-        /*
-         * Some implementations store alpha as 0-255
-         * instead of 0-1.
-         */
 
-        if (a > 1) {
+        /* ===============================================
+           SUPPORT 0 - 255 ALPHA
+           =============================================== */
+
+        if (
+            Number(a) > 1
+        ) {
 
             a =
-                a / 255;
+                Number(a) /
+                255;
         }
 
 
@@ -625,33 +1319,74 @@ class EvolutionRenderer {
 
             r:
                 this.clamp(
-                    Math.round(r),
+                    Math.round(
+                        Number(r) || 0
+                    ),
                     0,
                     255
                 ),
 
             g:
                 this.clamp(
-                    Math.round(g),
+                    Math.round(
+                        Number(g) || 0
+                    ),
                     0,
                     255
                 ),
 
             b:
                 this.clamp(
-                    Math.round(b),
+                    Math.round(
+                        Number(b) || 0
+                    ),
                     0,
                     255
                 ),
 
             a:
                 this.clamp(
-                    a,
+                    Number(a),
                     0,
                     1
                 )
 
         };
+    }
+
+
+
+    /* =====================================================
+       LEGACY TRIANGLE COLOUR
+       ===================================================== */
+
+    getTriangleColour(triangle) {
+
+        return this.getShapeColour(
+            triangle,
+            0.25
+        );
+    }
+
+
+
+    /* =====================================================
+       COLOUR TO CSS
+       ===================================================== */
+
+    colourToCSS(colour) {
+
+        return (
+            "rgba(" +
+            colour.r +
+            ", " +
+            colour.g +
+            ", " +
+            colour.b +
+            ", " +
+            colour.a +
+            ")"
+        );
     }
 
 
@@ -674,10 +1409,6 @@ class EvolutionRenderer {
         }
 
 
-        /*
-         * Already a CSS colour.
-         */
-
         if (
             typeof background ===
             "string"
@@ -687,10 +1418,6 @@ class EvolutionRenderer {
         }
 
 
-        /*
-         * RGB object.
-         */
-
         if (
             typeof background ===
             "object"
@@ -699,7 +1426,9 @@ class EvolutionRenderer {
             const r =
                 this.clamp(
                     Math.round(
-                        background.r ?? 0
+                        Number(
+                            background.r
+                        ) || 0
                     ),
                     0,
                     255
@@ -709,7 +1438,9 @@ class EvolutionRenderer {
             const g =
                 this.clamp(
                     Math.round(
-                        background.g ?? 0
+                        Number(
+                            background.g
+                        ) || 0
                     ),
                     0,
                     255
@@ -719,14 +1450,24 @@ class EvolutionRenderer {
             const b =
                 this.clamp(
                     Math.round(
-                        background.b ?? 0
+                        Number(
+                            background.b
+                        ) || 0
                     ),
                     0,
                     255
                 );
 
 
-            return `rgb(${r}, ${g}, ${b})`;
+            return (
+                "rgb(" +
+                r +
+                ", " +
+                g +
+                ", " +
+                b +
+                ")"
+            );
         }
 
 
@@ -737,21 +1478,29 @@ class EvolutionRenderer {
 
     /* =====================================================
        COORDINATE CONVERSION
+
+       Legacy TriangleGene may use normalised coordinates
+       between 0 and 1.
+
+       CircleGene and DotGene use pixel coordinates.
+
+       For mixed genes, their type tells us which convention
+       is expected.
        ===================================================== */
 
     toCanvasX(value) {
 
-        if (!Number.isFinite(value)) {
+        if (
+            !Number.isFinite(value)
+        ) {
+
             return 0;
         }
 
 
         /*
-         * TriangleGene may store coordinates as normalised
-         * values between 0 and 1.
-         *
-         * Values outside that range are assumed to already
-         * be pixel coordinates.
+         * Preserve compatibility with our original
+         * normalised TriangleGene.
          */
 
         if (
@@ -759,7 +1508,10 @@ class EvolutionRenderer {
             value <= 1
         ) {
 
-            return value * this.width;
+            return (
+                value *
+                this.width
+            );
         }
 
 
@@ -770,7 +1522,10 @@ class EvolutionRenderer {
 
     toCanvasY(value) {
 
-        if (!Number.isFinite(value)) {
+        if (
+            !Number.isFinite(value)
+        ) {
+
             return 0;
         }
 
@@ -780,11 +1535,251 @@ class EvolutionRenderer {
             value <= 1
         ) {
 
-            return value * this.height;
+            return (
+                value *
+                this.height
+            );
         }
 
 
         return value;
+    }
+
+
+
+    /* =====================================================
+       CIRCLE / DOT POSITION
+
+       CircleGene and DotGene are explicitly pixel-based.
+
+       These helpers avoid the old 0..1 normalisation
+       ambiguity for their centres.
+       ===================================================== */
+
+    circleCanvasX(value) {
+
+        if (
+            !Number.isFinite(value)
+        ) {
+
+            return 0;
+        }
+
+
+        return value;
+    }
+
+
+
+    circleCanvasY(value) {
+
+        if (
+            !Number.isFinite(value)
+        ) {
+
+            return 0;
+        }
+
+
+        return value;
+    }
+
+
+
+    /* =====================================================
+       RADIUS CONVERSION
+
+       Current CircleGene and DotGene use pixels.
+
+       A fractional radius below 1 is still allowed for
+       extremely fine dots.
+       ===================================================== */
+
+    getCanvasRadius(radius) {
+
+        radius =
+            Number(radius);
+
+
+        if (
+            !Number.isFinite(radius)
+        ) {
+
+            return 0;
+        }
+
+
+        return Math.max(
+            0,
+            radius
+        );
+    }
+
+
+
+    /* =====================================================
+       DRAW CIRCLE WITH PIXEL-SAFE POSITION
+
+       CircleGene stores its centre in pixel coordinates.
+       ===================================================== */
+
+    drawCircle(
+        context,
+        circle
+    ) {
+
+        if (!circle) {
+            return;
+        }
+
+
+        const x =
+            this.circleCanvasX(
+                Number(circle.x)
+            );
+
+
+        const y =
+            this.circleCanvasY(
+                Number(circle.y)
+            );
+
+
+        const radius =
+            this.getCanvasRadius(
+                circle.radius
+            );
+
+
+        if (
+            radius <= 0
+        ) {
+
+            return;
+        }
+
+
+        const colour =
+            this.getShapeColour(
+                circle,
+                0.25
+            );
+
+
+        context.beginPath();
+
+
+        context.arc(
+            x,
+            y,
+            radius,
+            0,
+            Math.PI * 2
+        );
+
+
+        context.fillStyle =
+            this.colourToCSS(
+                colour
+            );
+
+
+        context.fill();
+    }
+
+
+
+    /* =====================================================
+       DRAW DOT WITH PIXEL-SAFE POSITION
+       ===================================================== */
+
+    drawDot(
+        context,
+        dot
+    ) {
+
+        if (!dot) {
+            return;
+        }
+
+
+        const x =
+            this.circleCanvasX(
+                Number(dot.x)
+            );
+
+
+        const y =
+            this.circleCanvasY(
+                Number(dot.y)
+            );
+
+
+        const radius =
+            Math.max(
+                0.35,
+                this.getCanvasRadius(
+                    dot.radius
+                )
+            );
+
+
+        const colour =
+            this.getShapeColour(
+                dot,
+                0.5
+            );
+
+
+        context.beginPath();
+
+
+        context.arc(
+            x,
+            y,
+            radius,
+            0,
+            Math.PI * 2
+        );
+
+
+        context.fillStyle =
+            this.colourToCSS(
+                colour
+            );
+
+
+        context.fill();
+    }
+
+
+
+    /* =====================================================
+       RESET CONTEXT
+       ===================================================== */
+
+    resetContext(context) {
+
+        context.setTransform(
+            1,
+            0,
+            0,
+            1,
+            0,
+            0
+        );
+
+
+        context.globalAlpha =
+            1;
+
+
+        context.globalCompositeOperation =
+            "source-over";
+
+
+        context.imageSmoothingEnabled =
+            true;
     }
 
 
@@ -798,11 +1793,9 @@ class EvolutionRenderer {
         this.ctx.save();
 
 
-        this.ctx.globalAlpha =
-            1;
-
-        this.ctx.globalCompositeOperation =
-            "source-over";
+        this.resetContext(
+            this.ctx
+        );
 
 
         this.ctx.clearRect(
@@ -854,24 +1847,179 @@ class EvolutionRenderer {
 
 
     /* =====================================================
-       EXPORT PNG
+       CANVASES
        ===================================================== */
 
-    toDataURL() {
+    getCanvas() {
+
+        return this.canvas;
+    }
+
+
+
+    getBufferCanvas() {
+
+        return this.bufferCanvas;
+    }
+
+
+
+    getContext() {
+
+        return this.ctx;
+    }
+
+
+
+    getBufferContext() {
+
+        return this.bufferContext;
+    }
+
+
+
+    /* =====================================================
+       DIMENSIONS
+       ===================================================== */
+
+    getWidth() {
+
+        return this.width;
+    }
+
+
+
+    getHeight() {
+
+        return this.height;
+    }
+
+
+
+    /* =====================================================
+       EXPORT DATA URL
+       ===================================================== */
+
+    toDataURL(
+        type = "image/png",
+        quality = 1
+    ) {
 
         return this.canvas.toDataURL(
-            "image/png"
+            type,
+            quality
         );
     }
 
 
 
+    /* =====================================================
+       BUFFER DATA URL
+
+       Useful for ExportManager.
+       ===================================================== */
+
+    bufferToDataURL(
+        type = "image/png",
+        quality = 1
+    ) {
+
+        return this.bufferCanvas.toDataURL(
+            type,
+            quality
+        );
+    }
+
+
+
+    /* =====================================================
+       RENDER GENOME TO DATA URL
+       ===================================================== */
+
+    genomeToDataURL(
+        genome,
+        type = "image/png",
+        quality = 1
+    ) {
+
+        this.renderToBuffer(
+            genome
+        );
+
+
+        return this.bufferCanvas.toDataURL(
+            type,
+            quality
+        );
+    }
+
+
+
+    /* =====================================================
+       RENDER GENOME TO BLOB
+
+       Better than a data URL for larger downloads.
+       ===================================================== */
+
+    genomeToBlob(
+        genome,
+        type = "image/png",
+        quality = 1
+    ) {
+
+        this.renderToBuffer(
+            genome
+        );
+
+
+        return new Promise(
+            (resolve, reject) => {
+
+                this.bufferCanvas.toBlob(
+                    blob => {
+
+                        if (blob) {
+
+                            resolve(
+                                blob
+                            );
+
+                        } else {
+
+                            reject(
+                                new Error(
+                                    "Unable to create image blob."
+                                )
+                            );
+                        }
+                    },
+                    type,
+                    quality
+                );
+            }
+        );
+    }
+
+
+
+    /* =====================================================
+       DOWNLOAD PNG
+
+       Retained for compatibility.
+
+       ExportManager will eventually own the main download
+       controls.
+       ===================================================== */
+
     downloadPNG(
-        filename = "evolved-image.png"
+        filename =
+            "evolved-image.png"
     ) {
 
         const link =
-            document.createElement("a");
+            document.createElement(
+                "a"
+            );
 
 
         link.download =
@@ -879,7 +2027,9 @@ class EvolutionRenderer {
 
 
         link.href =
-            this.toDataURL();
+            this.toDataURL(
+                "image/png"
+            );
 
 
         document.body.appendChild(
@@ -898,6 +2048,19 @@ class EvolutionRenderer {
 
 
     /* =====================================================
+       SHAPE COUNT
+       ===================================================== */
+
+    getShapeCount(genome) {
+
+        return this.getShapes(
+            genome
+        ).length;
+    }
+
+
+
+    /* =====================================================
        UTILITY
        ===================================================== */
 
@@ -906,6 +2069,18 @@ class EvolutionRenderer {
         minimum,
         maximum
     ) {
+
+        value =
+            Number(value);
+
+
+        if (
+            !Number.isFinite(value)
+        ) {
+
+            return minimum;
+        }
+
 
         return Math.max(
             minimum,

@@ -7,21 +7,34 @@
 
    Connects:
 
-   TargetImage
-        ↓
-   FitnessEvaluator
-        ↓
-   GeneticAlgorithm
-        ↓
-   Population
-        ↓
-   Genome
-        ↓
-   TriangleGene
-        ↓
-   EvolutionRenderer
+       TargetImage
+            ↓
+       FitnessEvaluator
+            ↓
+       GeneticAlgorithm
+            ↓
+       Population
+            ↓
+       Genome
+            ↓
+       TriangleGene / CircleGene / DotGene
+            ↓
+       EvolutionRenderer
+            ↓
+       ExportManager
 
-   Also connects all HTML controls and statistics.
+   Handles:
+
+   - Target image loading
+   - Mixed shape counts
+   - Progressive resolution
+   - Adaptive mutation
+   - Error-guided mutation
+   - Evolution playback
+   - Statistics
+   - PNG export
+   - JSON export/import
+   - GIF export
    ========================================================= */
 
 
@@ -71,7 +84,9 @@ async function initialiseApplication() {
     const elements = {
 
 
-        /* TARGET IMAGE */
+        /* =================================================
+           TARGET IMAGE
+           ================================================= */
 
         imageUpload:
             document.getElementById(
@@ -89,7 +104,10 @@ async function initialiseApplication() {
             ),
 
 
-        /* PARAMETERS */
+
+        /* =================================================
+           SHAPE COUNTS
+           ================================================= */
 
         triangleCount:
             document.getElementById(
@@ -101,6 +119,39 @@ async function initialiseApplication() {
                 "triangleCountValue"
             ),
 
+
+        circleCount:
+            document.getElementById(
+                "circleCount"
+            ),
+
+        circleCountValue:
+            document.getElementById(
+                "circleCountValue"
+            ),
+
+
+        dotCount:
+            document.getElementById(
+                "dotCount"
+            ),
+
+        dotCountValue:
+            document.getElementById(
+                "dotCountValue"
+            ),
+
+
+        totalShapeValue:
+            document.getElementById(
+                "totalShapeValue"
+            ),
+
+
+
+        /* =================================================
+           GENETIC ALGORITHM PARAMETERS
+           ================================================= */
 
         populationSize:
             document.getElementById(
@@ -146,13 +197,42 @@ async function initialiseApplication() {
             ),
 
 
+
+        /* =================================================
+           ADVANCED EVOLUTION
+           ================================================= */
+
+        progressiveResolution:
+            document.getElementById(
+                "progressiveResolution"
+            ),
+
+        adaptiveMutation:
+            document.getElementById(
+                "adaptiveMutation"
+            ),
+
+        errorGuidedMutation:
+            document.getElementById(
+                "errorGuidedMutation"
+            ),
+
+
+
+        /* =================================================
+           BACKGROUND
+           ================================================= */
+
         backgroundMode:
             document.getElementById(
                 "backgroundMode"
             ),
 
 
-        /* BUTTONS */
+
+        /* =================================================
+           PLAYBACK BUTTONS
+           ================================================= */
 
         startButton:
             document.getElementById(
@@ -179,13 +259,57 @@ async function initialiseApplication() {
                 "resetButton"
             ),
 
+
+
+        /* =================================================
+           EXPORT
+           ================================================= */
+
         downloadButton:
             document.getElementById(
                 "downloadButton"
             ),
 
+        downloadJsonButton:
+            document.getElementById(
+                "downloadJsonButton"
+            ),
 
-        /* MAIN STATISTICS */
+        downloadGifButton:
+            document.getElementById(
+                "downloadGifButton"
+            ),
+
+        genomeUpload:
+            document.getElementById(
+                "genomeUpload"
+            ),
+
+        gifMode:
+            document.getElementById(
+                "gifMode"
+            ),
+
+        gifFrameDelay:
+            document.getElementById(
+                "gifFrameDelay"
+            ),
+
+        shapesPerFrame:
+            document.getElementById(
+                "shapesPerFrame"
+            ),
+
+        exportStatus:
+            document.getElementById(
+                "exportStatus"
+            ),
+
+
+
+        /* =================================================
+           HEADER STATISTICS
+           ================================================= */
 
         similarityStat:
             document.getElementById(
@@ -202,13 +326,28 @@ async function initialiseApplication() {
                 "attemptStat"
             ),
 
+        /*
+         * Legacy HTML ID.
+         *
+         * The visible label is now SHAPES rather than
+         * TRIANGLES.
+         */
+
         triangleStat:
             document.getElementById(
                 "triangleStat"
             ),
 
+        resolutionStat:
+            document.getElementById(
+                "resolutionStat"
+            ),
 
-        /* LARGE STATISTICS */
+
+
+        /* =================================================
+           LARGE STATISTICS
+           ================================================= */
 
         similarityLarge:
             document.getElementById(
@@ -230,13 +369,26 @@ async function initialiseApplication() {
                 "evaluationStat"
             ),
 
+        resolutionLarge:
+            document.getElementById(
+                "resolutionLarge"
+            ),
+
+        improvementStat:
+            document.getElementById(
+                "improvementStat"
+            ),
+
         similarityBar:
             document.getElementById(
                 "similarityBar"
             ),
 
 
-        /* CANVAS MESSAGE */
+
+        /* =================================================
+           CANVAS MESSAGE
+           ================================================= */
 
         canvasMessage:
             document.getElementById(
@@ -248,15 +400,17 @@ async function initialiseApplication() {
 
 
     /* =====================================================
-       CONSTANTS
+       DIMENSIONS
        ===================================================== */
 
     const WIDTH =
-        canvas.width || 480;
+        canvas.width ||
+        480;
 
 
     const HEIGHT =
-        canvas.height || 715;
+        canvas.height ||
+        715;
 
 
 
@@ -277,18 +431,66 @@ async function initialiseApplication() {
         );
 
 
-    const fitnessEvaluator =
-        new FitnessEvaluator();
+    /*
+     * The evaluator receives its target after TargetImage
+     * has finished loading.
+     */
 
+    const fitnessEvaluator =
+        new FitnessEvaluator(
+            null,
+            {
+                progressive:
+                    true,
+
+                progressiveWidths:
+                    [
+                        60,
+                        120,
+                        240,
+                        WIDTH
+                    ]
+            }
+        );
 
 
     /*
-     * GeneticAlgorithm is created after the target image
-     * has loaded.
+     * GA is created when a search begins because structural
+     * controls such as shape count and population size may
+     * have changed.
      */
 
     let geneticAlgorithm =
         null;
+
+
+
+    /* =====================================================
+       EXPORT MANAGER
+       ===================================================== */
+
+    const exportManager =
+        typeof ExportManager !==
+        "undefined"
+            ? new ExportManager({
+
+                renderer:
+                    renderer,
+
+                width:
+                    WIDTH,
+
+                height:
+                    HEIGHT,
+
+                baseFilename:
+                    "evolved-mona-lisa",
+
+                statusCallback:
+                    updateExportStatus
+
+            })
+            : null;
 
 
 
@@ -308,16 +510,36 @@ async function initialiseApplication() {
         null;
 
 
-    let lastFrameTime =
+    /*
+     * Used for the improvement-per-generation display.
+     */
+
+    let previousDisplayedSimilarity =
+        0;
+
+
+    let previousDisplayedGeneration =
         0;
 
 
     /*
-     * Prevent the browser from becoming completely occupied
-     * by evolution.
+     * Periodically save evolutionary checkpoints for the
+     * optional history GIF.
+     */
+
+    let lastHistoryGeneration =
+        -1;
+
+
+    const HISTORY_INTERVAL =
+        25;
+
+
+    /*
+     * Evolution can consume the entire browser thread if we
+     * blindly execute the requested number of generations.
      *
-     * Evolution is computationally expensive because every
-     * candidate requires rendering and pixel comparison.
+     * A time budget keeps controls and painting responsive.
      */
 
     const FRAME_BUDGET_MS =
@@ -326,12 +548,10 @@ async function initialiseApplication() {
 
 
     /* =====================================================
-       SHOW CANVAS MESSAGE
+       CANVAS MESSAGE
        ===================================================== */
 
-    function showCanvasMessage(
-        message
-    ) {
+    function showCanvasMessage(message) {
 
         if (!elements.canvasMessage) {
             return;
@@ -348,10 +568,6 @@ async function initialiseApplication() {
 
 
 
-    /* =====================================================
-       HIDE CANVAS MESSAGE
-       ===================================================== */
-
     function hideCanvasMessage() {
 
         if (!elements.canvasMessage) {
@@ -361,6 +577,30 @@ async function initialiseApplication() {
 
         elements.canvasMessage.style.display =
             "none";
+    }
+
+
+
+    /* =====================================================
+       EXPORT STATUS
+       ===================================================== */
+
+    function updateExportStatus(
+        message,
+        type = "info"
+    ) {
+
+        if (!elements.exportStatus) {
+            return;
+        }
+
+
+        elements.exportStatus.textContent =
+            message;
+
+
+        elements.exportStatus.dataset.status =
+            type;
     }
 
 
@@ -393,23 +633,83 @@ async function initialiseApplication() {
 
 
     /* =====================================================
+       READ CHECKBOX
+       ===================================================== */
+
+    function readCheckbox(
+        element,
+        fallback = false
+    ) {
+
+        if (!element) {
+            return fallback;
+        }
+
+
+        return Boolean(
+            element.checked
+        );
+    }
+
+
+
+    /* =====================================================
        CURRENT SETTINGS
        ===================================================== */
 
     function getSettings() {
 
+        const triangleCount =
+            Math.max(
+                0,
+                Math.floor(
+                    readNumber(
+                        elements.triangleCount,
+                        100
+                    )
+                )
+            );
+
+
+        const circleCount =
+            Math.max(
+                0,
+                Math.floor(
+                    readNumber(
+                        elements.circleCount,
+                        40
+                    )
+                )
+            );
+
+
+        const dotCount =
+            Math.max(
+                0,
+                Math.floor(
+                    readNumber(
+                        elements.dotCount,
+                        25
+                    )
+                )
+            );
+
+
         return {
 
             triangleCount:
-                Math.max(
-                    1,
-                    Math.floor(
-                        readNumber(
-                            elements.triangleCount,
-                            100
-                        )
-                    )
-                ),
+                triangleCount,
+
+            circleCount:
+                circleCount,
+
+            dotCount:
+                dotCount,
+
+            totalShapeCount:
+                triangleCount +
+                circleCount +
+                dotCount,
 
 
             populationSize:
@@ -437,9 +737,7 @@ async function initialiseApplication() {
 
 
             /*
-             * HTML uses 1-100.
-             *
-             * GeneticAlgorithm expects 0-1.
+             * HTML slider uses percentage values.
              */
 
             mutationStrength:
@@ -464,6 +762,57 @@ async function initialiseApplication() {
                             1
                         )
                     )
+                ),
+
+
+            progressiveResolution:
+                readCheckbox(
+                    elements.progressiveResolution,
+                    true
+                ),
+
+
+            adaptiveMutation:
+                readCheckbox(
+                    elements.adaptiveMutation,
+                    true
+                ),
+
+
+            errorGuidedMutation:
+                readCheckbox(
+                    elements.errorGuidedMutation,
+                    true
+                ),
+
+
+            gifMode:
+                elements.gifMode
+                    ? elements.gifMode.value
+                    : "build",
+
+
+            gifFrameDelay:
+                Math.max(
+                    10,
+                    Math.floor(
+                        readNumber(
+                            elements.gifFrameDelay,
+                            40
+                        )
+                    )
+                ),
+
+
+            shapesPerFrame:
+                Math.max(
+                    1,
+                    Math.floor(
+                        readNumber(
+                            elements.shapesPerFrame,
+                            2
+                        )
+                    )
                 )
 
         };
@@ -481,53 +830,56 @@ async function initialiseApplication() {
             getSettings();
 
 
-        if (
-            elements.triangleCountValue
-        ) {
-
-            elements.triangleCountValue.textContent =
-                settings.triangleCount;
-        }
+        setText(
+            elements.triangleCountValue,
+            settings.triangleCount
+        );
 
 
-        if (
-            elements.populationSizeValue
-        ) {
-
-            elements.populationSizeValue.textContent =
-                settings.populationSize;
-        }
+        setText(
+            elements.circleCountValue,
+            settings.circleCount
+        );
 
 
-        if (
-            elements.mutationsPerChildValue
-        ) {
-
-            elements.mutationsPerChildValue.textContent =
-                settings.mutationsPerChild;
-        }
+        setText(
+            elements.dotCountValue,
+            settings.dotCount
+        );
 
 
-        if (
-            elements.mutationStrengthValue
-        ) {
-
-            elements.mutationStrengthValue.textContent =
-                Math.round(
-                    settings.mutationStrength *
-                    100
-                ) +
-                "%";
-        }
+        setText(
+            elements.totalShapeValue,
+            settings.totalShapeCount
+        );
 
 
-        if (
-            elements.evolutionSpeedValue
-        ) {
+        setText(
+            elements.populationSizeValue,
+            settings.populationSize
+        );
 
-            elements.evolutionSpeedValue.textContent =
-                settings.generationsPerFrame;
-        }
+
+        setText(
+            elements.mutationsPerChildValue,
+            settings.mutationsPerChild
+        );
+
+
+        setText(
+            elements.mutationStrengthValue,
+            Math.round(
+                settings.mutationStrength *
+                100
+            ) +
+            "%"
+        );
+
+
+        setText(
+            elements.evolutionSpeedValue,
+            settings.generationsPerFrame
+        );
     }
 
 
@@ -545,7 +897,6 @@ async function initialiseApplication() {
 
 
         switch (mode) {
-
 
             case "black":
 
@@ -597,8 +948,24 @@ async function initialiseApplication() {
             case "average":
             default:
 
-                return targetImage
-                    .getAverageColour();
+                if (
+                    typeof targetImage
+                        .getAverageColour ===
+                    "function"
+                ) {
+
+                    return targetImage
+                        .getAverageColour();
+                }
+
+
+                return {
+
+                    r: 0,
+                    g: 0,
+                    b: 0
+
+                };
         }
     }
 
@@ -609,7 +976,8 @@ async function initialiseApplication() {
        ===================================================== */
 
     function applyBackgroundToGenome(
-        genome
+        genome,
+        fixedColour = null
     ) {
 
         if (!genome) {
@@ -618,6 +986,7 @@ async function initialiseApplication() {
 
 
         const colour =
+            fixedColour ??
             getBackgroundColour();
 
 
@@ -633,21 +1002,45 @@ async function initialiseApplication() {
                 colour.b
             );
 
-        } else {
-
-            genome.backgroundColour = {
-
-                r:
-                    colour.r,
-
-                g:
-                    colour.g,
-
-                b:
-                    colour.b
-
-            };
+            return;
         }
+
+
+        if (
+            typeof genome
+                .setBackground ===
+            "function"
+        ) {
+
+            genome.setBackground(
+                colour
+            );
+
+            return;
+        }
+
+
+        /*
+         * Keep both names for compatibility with the older
+         * renderer and the newer genome/export classes.
+         */
+
+        genome.background = {
+
+            r:
+                colour.r,
+
+            g:
+                colour.g,
+
+            b:
+                colour.b
+
+        };
+
+
+        genome.backgroundColour =
+            genome.background;
     }
 
 
@@ -668,25 +1061,88 @@ async function initialiseApplication() {
 
 
         const genomes =
-            geneticAlgorithm
-                .getPopulationGenomes();
+            getPopulationGenomes();
+
+
+        const mode =
+            elements.backgroundMode
+                ? elements.backgroundMode.value
+                : "average";
 
 
         /*
-         * For random mode each genome receives its own
-         * background.
-         *
-         * For all other modes they receive the same colour.
+         * Random mode intentionally generates a different
+         * background for each genome.
          */
 
+        const fixedColour =
+            mode === "random"
+                ? null
+                : getBackgroundColour();
+
+
         for (
-            const genome of genomes
+            const genome of
+            genomes
         ) {
 
             applyBackgroundToGenome(
-                genome
+                genome,
+                fixedColour
             );
         }
+    }
+
+
+
+    /* =====================================================
+       GET POPULATION GENOMES
+       ===================================================== */
+
+    function getPopulationGenomes() {
+
+        if (!geneticAlgorithm) {
+            return [];
+        }
+
+
+        if (
+            typeof geneticAlgorithm
+                .getPopulationGenomes ===
+            "function"
+        ) {
+
+            return geneticAlgorithm
+                .getPopulationGenomes();
+        }
+
+
+        if (
+            geneticAlgorithm.population &&
+            typeof geneticAlgorithm.population
+                .getGenomes ===
+            "function"
+        ) {
+
+            return geneticAlgorithm.population
+                .getGenomes();
+        }
+
+
+        if (
+            Array.isArray(
+                geneticAlgorithm.population
+                    ?.genomes
+            )
+        ) {
+
+            return geneticAlgorithm
+                .population
+                .genomes;
+        }
+
+
+        return [];
     }
 
 
@@ -701,6 +1157,23 @@ async function initialiseApplication() {
             getSettings();
 
 
+        /*
+         * Progressive resolution belongs to the evaluator.
+         */
+
+        if (
+            typeof fitnessEvaluator
+                .setProgressiveEnabled ===
+            "function"
+        ) {
+
+            fitnessEvaluator
+                .setProgressiveEnabled(
+                    settings.progressiveResolution
+                );
+        }
+
+
         geneticAlgorithm =
             new GeneticAlgorithm({
 
@@ -710,16 +1183,17 @@ async function initialiseApplication() {
                 triangleCount:
                     settings.triangleCount,
 
+                circleCount:
+                    settings.circleCount,
+
+                dotCount:
+                    settings.dotCount,
+
                 mutationsPerChild:
                     settings.mutationsPerChild,
 
                 mutationStrength:
                     settings.mutationStrength,
-
-                /*
-                 * A small elite set works well for this
-                 * type of evolutionary search.
-                 */
 
                 eliteCount:
                     Math.max(
@@ -737,14 +1211,22 @@ async function initialiseApplication() {
                     3,
 
                 /*
-                 * Sample every second pixel during
-                 * evolution.
-                 *
-                 * This substantially reduces CPU cost.
+                 * Progressive resolution now provides the
+                 * primary scoring optimisation, so sampleStep
+                 * can remain 1.
                  */
 
                 sampleStep:
-                    2,
+                    1,
+
+                progressiveResolution:
+                    settings.progressiveResolution,
+
+                adaptiveMutation:
+                    settings.adaptiveMutation,
+
+                errorGuidedMutation:
+                    settings.errorGuidedMutation,
 
                 renderer:
                     renderer,
@@ -769,51 +1251,203 @@ async function initialiseApplication() {
         stopEvolution();
 
 
+        const settings =
+            getSettings();
+
+
+        if (
+            settings.totalShapeCount <=
+            0
+        ) {
+
+            showCanvasMessage(
+                "Add at least one shape before starting evolution."
+            );
+
+            return null;
+        }
+
+
         createGeneticAlgorithm();
 
 
+        if (
+            exportManager
+        ) {
+
+            exportManager
+                .clearHistory();
+        }
+
+
+        lastHistoryGeneration =
+            -1;
+
+
+        previousDisplayedSimilarity =
+            0;
+
+
+        previousDisplayedGeneration =
+            0;
+
+
         /*
-         * GeneticAlgorithm.initialise() creates the
-         * population itself.
+         * GeneticAlgorithm owns population creation.
          */
 
-        geneticAlgorithm.initialise();
+        geneticAlgorithm
+            .initialise();
 
 
         /*
-         * Apply chosen backgrounds after population
-         * creation.
+         * The selected background is part of the rendered
+         * phenotype. Apply it before accepting the initial
+         * population scores.
          */
 
         applyBackgroundToPopulation();
 
 
         /*
-         * Background changes alter every genome, so the
-         * population must be evaluated again.
+         * The population was modified after initialise(), so
+         * invalidate and evaluate it again.
          */
 
-        geneticAlgorithm
-            .evaluatePopulation();
+        invalidatePopulationFitness();
 
 
-        geneticAlgorithm
-            .sortPopulation();
+        if (
+            typeof geneticAlgorithm
+                .evaluatePopulation ===
+            "function"
+        ) {
 
-
-        const genomes =
             geneticAlgorithm
-                .getPopulationGenomes();
+                .evaluatePopulation();
+        }
 
 
-        geneticAlgorithm.generationBest =
-            genomes[0] ?? null;
+        if (
+            typeof geneticAlgorithm
+                .sortPopulation ===
+            "function"
+        ) {
+
+            geneticAlgorithm
+                .sortPopulation();
+        }
 
 
         /*
-         * Reset the all-time best because the population
-         * was changed after initialise().
+         * Ask the GA to refresh its best records if its
+         * public API provides a helper.
          */
+
+        refreshAlgorithmBest();
+
+
+        lastDisplayedGenome =
+            getBestGenome();
+
+
+        if (
+            lastDisplayedGenome
+        ) {
+
+            renderer.render(
+                lastDisplayedGenome
+            );
+
+
+            recordEvolutionHistory(
+                true
+            );
+
+
+            hideCanvasMessage();
+        }
+
+
+        updateStatistics();
+
+
+        return lastDisplayedGenome;
+    }
+
+
+
+    /* =====================================================
+       INVALIDATE POPULATION FITNESS
+       ===================================================== */
+
+    function invalidatePopulationFitness() {
+
+        const genomes =
+            getPopulationGenomes();
+
+
+        for (
+            const genome of
+            genomes
+        ) {
+
+            if (
+                typeof fitnessEvaluator
+                    .invalidateGenome ===
+                "function"
+            ) {
+
+                fitnessEvaluator
+                    .invalidateGenome(
+                        genome
+                    );
+
+            } else {
+
+                genome.fitness =
+                    -Infinity;
+
+                genome.similarity =
+                    0;
+
+                genome.error =
+                    Infinity;
+            }
+        }
+    }
+
+
+
+    /* =====================================================
+       REFRESH ALGORITHM BEST
+       ===================================================== */
+
+    function refreshAlgorithmBest() {
+
+        if (!geneticAlgorithm) {
+            return;
+        }
+
+
+        const genomes =
+            getPopulationGenomes();
+
+
+        const generationBest =
+            genomes[0] ??
+            null;
+
+
+        if (
+            "generationBest" in
+            geneticAlgorithm
+        ) {
+
+            geneticAlgorithm.generationBest =
+                generationBest;
+        }
+
 
         geneticAlgorithm.bestGenome =
             null;
@@ -831,43 +1465,89 @@ async function initialiseApplication() {
             Infinity;
 
 
-        geneticAlgorithm.updateBest(
+        if (
+            typeof geneticAlgorithm
+                .updateBest ===
+            "function"
+        ) {
+
             geneticAlgorithm
-                .generationBest
-        );
+                .updateBest(
+                    generationBest
+                );
+
+        } else if (
+            generationBest
+        ) {
+
+            geneticAlgorithm.bestGenome =
+                typeof generationBest.clone ===
+                    "function"
+                    ? generationBest.clone()
+                    : generationBest;
 
 
-        lastDisplayedGenome =
-            geneticAlgorithm
-                .getBestGenome();
+            geneticAlgorithm.bestFitness =
+                Number(
+                    generationBest.fitness
+                ) || 0;
 
 
-        if (lastDisplayedGenome) {
+            geneticAlgorithm.bestSimilarity =
+                Number(
+                    generationBest.similarity
+                ) || 0;
 
-            renderer.render(
-                lastDisplayedGenome
-            );
 
-
-            hideCanvasMessage();
+            geneticAlgorithm.bestError =
+                Number(
+                    generationBest.error
+                );
         }
-
-
-        updateStatistics();
-
-
-        return lastDisplayedGenome;
     }
 
 
 
     /* =====================================================
-       START EVOLUTION
+       GET BEST GENOME
+       ===================================================== */
+
+    function getBestGenome() {
+
+        if (!geneticAlgorithm) {
+            return null;
+        }
+
+
+        if (
+            typeof geneticAlgorithm
+                .getBestGenome ===
+            "function"
+        ) {
+
+            return geneticAlgorithm
+                .getBestGenome();
+        }
+
+
+        return (
+            geneticAlgorithm.bestGenome ??
+            getPopulationGenomes()[0] ??
+            null
+        );
+    }
+
+
+
+    /* =====================================================
+       START / RESUME EVOLUTION
        ===================================================== */
 
     function startEvolution() {
 
-        if (!targetImage.isLoaded()) {
+        if (
+            !targetImage.isLoaded()
+        ) {
 
             showCanvasMessage(
                 "Target image is still loading."
@@ -877,16 +1557,18 @@ async function initialiseApplication() {
         }
 
 
-        /*
-         * First start creates a new population.
-         */
-
         if (
             !geneticAlgorithm ||
-            !geneticAlgorithm.isInitialised()
+            !isAlgorithmInitialised()
         ) {
 
-            initialiseEvolution();
+            const genome =
+                initialiseEvolution();
+
+
+            if (!genome) {
+                return;
+            }
         }
 
 
@@ -899,10 +1581,6 @@ async function initialiseApplication() {
             true;
 
 
-        lastFrameTime =
-            performance.now();
-
-
         updateButtonState();
 
 
@@ -913,6 +1591,37 @@ async function initialiseApplication() {
             requestAnimationFrame(
                 evolutionLoop
             );
+    }
+
+
+
+    /* =====================================================
+       ALGORITHM INITIALISED?
+       ===================================================== */
+
+    function isAlgorithmInitialised() {
+
+        if (!geneticAlgorithm) {
+            return false;
+        }
+
+
+        if (
+            typeof geneticAlgorithm
+                .isInitialised ===
+            "function"
+        ) {
+
+            return geneticAlgorithm
+                .isInitialised();
+        }
+
+
+        return (
+            getPopulationGenomes()
+                .length >
+            0
+        );
     }
 
 
@@ -948,14 +1657,12 @@ async function initialiseApplication() {
 
 
     /* =====================================================
-       EVOLUTION LOOP
+       APPLY LIVE ALGORITHM SETTINGS
        ===================================================== */
 
-    function evolutionLoop(
-        timestamp
-    ) {
+    function applyLiveAlgorithmSettings() {
 
-        if (!running) {
+        if (!geneticAlgorithm) {
             return;
         }
 
@@ -964,20 +1671,91 @@ async function initialiseApplication() {
             getSettings();
 
 
+        if (
+            typeof geneticAlgorithm
+                .setMutationsPerChild ===
+            "function"
+        ) {
+
+            geneticAlgorithm
+                .setMutationsPerChild(
+                    settings.mutationsPerChild
+                );
+        }
+
+
+        if (
+            typeof geneticAlgorithm
+                .setMutationStrength ===
+            "function"
+        ) {
+
+            geneticAlgorithm
+                .setMutationStrength(
+                    settings.mutationStrength
+                );
+        }
+
+
         /*
-         * Runtime controls can change without restarting.
+         * Support either explicit setters or public option
+         * properties depending on the GA implementation.
          */
 
-        geneticAlgorithm
-            .setMutationsPerChild(
-                settings.mutationsPerChild
-            );
+        if (
+            typeof geneticAlgorithm
+                .setAdaptiveMutation ===
+            "function"
+        ) {
+
+            geneticAlgorithm
+                .setAdaptiveMutation(
+                    settings.adaptiveMutation
+                );
+
+        } else {
+
+            geneticAlgorithm.adaptiveMutation =
+                settings.adaptiveMutation;
+        }
 
 
-        geneticAlgorithm
-            .setMutationStrength(
-                settings.mutationStrength
-            );
+        if (
+            typeof geneticAlgorithm
+                .setErrorGuidedMutation ===
+            "function"
+        ) {
+
+            geneticAlgorithm
+                .setErrorGuidedMutation(
+                    settings.errorGuidedMutation
+                );
+
+        } else {
+
+            geneticAlgorithm.errorGuidedMutation =
+                settings.errorGuidedMutation;
+        }
+    }
+
+
+
+    /* =====================================================
+       EVOLUTION LOOP
+       ===================================================== */
+
+    function evolutionLoop() {
+
+        if (!running) {
+            return;
+        }
+
+
+        applyLiveAlgorithmSettings();
+
+
+        const settings =
+            getSettings();
 
 
         const frameStart =
@@ -987,14 +1765,6 @@ async function initialiseApplication() {
         let generationsCompleted =
             0;
 
-
-        /*
-         * Attempt the requested number of generations but
-         * respect a CPU-time budget.
-         *
-         * This keeps the browser responsive even if the
-         * user sets Generations / Frame to 50.
-         */
 
         while (
             generationsCompleted <
@@ -1007,13 +1777,14 @@ async function initialiseApplication() {
             generationsCompleted++;
 
 
-            const elapsed =
-                performance.now() -
-                frameStart;
-
+            /*
+             * Don't allow an aggressive Generations / Frame
+             * setting to freeze the UI.
+             */
 
             if (
-                elapsed >=
+                performance.now() -
+                frameStart >=
                 FRAME_BUDGET_MS
             ) {
 
@@ -1023,11 +1794,12 @@ async function initialiseApplication() {
 
 
         const bestGenome =
-            geneticAlgorithm
-                .getBestGenome();
+            getBestGenome();
 
 
-        if (bestGenome) {
+        if (
+            bestGenome
+        ) {
 
             renderer.render(
                 bestGenome
@@ -1036,14 +1808,13 @@ async function initialiseApplication() {
 
             lastDisplayedGenome =
                 bestGenome;
+
+
+            recordEvolutionHistory();
         }
 
 
         updateStatistics();
-
-
-        lastFrameTime =
-            timestamp;
 
 
         animationFrameId =
@@ -1060,7 +1831,10 @@ async function initialiseApplication() {
 
     function stepEvolution() {
 
-        if (!targetImage.isLoaded()) {
+        if (
+            !targetImage.isLoaded()
+        ) {
+
             return;
         }
 
@@ -1070,7 +1844,7 @@ async function initialiseApplication() {
 
         if (
             !geneticAlgorithm ||
-            !geneticAlgorithm.isInitialised()
+            !isAlgorithmInitialised()
         ) {
 
             initialiseEvolution();
@@ -1079,15 +1853,19 @@ async function initialiseApplication() {
         }
 
 
+        applyLiveAlgorithmSettings();
+
+
         geneticAlgorithm.step();
 
 
         const bestGenome =
-            geneticAlgorithm
-                .getBestGenome();
+            getBestGenome();
 
 
-        if (bestGenome) {
+        if (
+            bestGenome
+        ) {
 
             renderer.render(
                 bestGenome
@@ -1096,6 +1874,9 @@ async function initialiseApplication() {
 
             lastDisplayedGenome =
                 bestGenome;
+
+
+            recordEvolutionHistory();
         }
 
 
@@ -1103,6 +1884,67 @@ async function initialiseApplication() {
 
 
         updateStatistics();
+    }
+
+
+
+    /* =====================================================
+       RECORD EVOLUTION HISTORY
+       ===================================================== */
+
+    function recordEvolutionHistory(
+        force = false
+    ) {
+
+        if (
+            !exportManager ||
+            !lastDisplayedGenome ||
+            !geneticAlgorithm
+        ) {
+
+            return;
+        }
+
+
+        const stats =
+            getAlgorithmStatistics();
+
+
+        const generation =
+            Number(
+                stats.generation
+            ) || 0;
+
+
+        if (
+            !force &&
+            generation -
+                lastHistoryGeneration <
+                HISTORY_INTERVAL
+        ) {
+
+            return;
+        }
+
+
+        exportManager
+            .recordHistory(
+                lastDisplayedGenome,
+                {
+                    generation:
+                        generation,
+
+                    similarity:
+                        stats.bestSimilarity,
+
+                    fitness:
+                        stats.bestFitness
+                }
+            );
+
+
+        lastHistoryGeneration =
+            generation;
     }
 
 
@@ -1116,9 +1958,15 @@ async function initialiseApplication() {
         stopEvolution();
 
 
-        if (geneticAlgorithm) {
+        if (
+            geneticAlgorithm &&
+            typeof geneticAlgorithm
+                .reset ===
+            "function"
+        ) {
 
-            geneticAlgorithm.reset();
+            geneticAlgorithm
+                .reset();
         }
 
 
@@ -1130,6 +1978,32 @@ async function initialiseApplication() {
             null;
 
 
+        previousDisplayedSimilarity =
+            0;
+
+
+        previousDisplayedGeneration =
+            0;
+
+
+        lastHistoryGeneration =
+            -1;
+
+
+        if (
+            exportManager
+        ) {
+
+            exportManager
+                .clearHistory();
+
+
+            updateExportStatus(
+                "Nothing exported yet."
+            );
+        }
+
+
         renderer.clear();
 
 
@@ -1138,6 +2012,107 @@ async function initialiseApplication() {
 
         showCanvasMessage(
             "Press Start Evolution to begin."
+        );
+    }
+
+
+
+    /* =====================================================
+       GET ALGORITHM STATISTICS
+       ===================================================== */
+
+    function getAlgorithmStatistics() {
+
+        if (!geneticAlgorithm) {
+
+            return {};
+        }
+
+
+        if (
+            typeof geneticAlgorithm
+                .getStatistics ===
+            "function"
+        ) {
+
+            return geneticAlgorithm
+                .getStatistics();
+        }
+
+
+        return {
+
+            generation:
+                geneticAlgorithm.generation,
+
+            attempts:
+                geneticAlgorithm.attempts,
+
+            evaluations:
+                fitnessEvaluator
+                    ?.getEvaluationCount?.(),
+
+            bestFitness:
+                geneticAlgorithm.bestFitness,
+
+            bestSimilarity:
+                geneticAlgorithm.bestSimilarity,
+
+            bestError:
+                geneticAlgorithm.bestError
+
+        };
+    }
+
+
+
+    /* =====================================================
+       CURRENT RESOLUTION LABEL
+       ===================================================== */
+
+    function getResolutionLabel() {
+
+        if (
+            typeof fitnessEvaluator
+                .getResolutionLabel ===
+            "function"
+        ) {
+
+            return fitnessEvaluator
+                .getResolutionLabel();
+        }
+
+
+        if (
+            typeof fitnessEvaluator
+                .getCurrentResolution ===
+            "function"
+        ) {
+
+            const resolution =
+                fitnessEvaluator
+                    .getCurrentResolution();
+
+
+            if (
+                resolution &&
+                resolution.width &&
+                resolution.height
+            ) {
+
+                return (
+                    resolution.width +
+                    "×" +
+                    resolution.height
+                );
+            }
+        }
+
+
+        return (
+            WIDTH +
+            "×" +
+            HEIGHT
         );
     }
 
@@ -1158,63 +2133,101 @@ async function initialiseApplication() {
 
 
         const stats =
-            geneticAlgorithm
-                .getStatistics();
+            getAlgorithmStatistics();
 
 
         const similarity =
-            Number.isFinite(
-                stats.bestSimilarity
-            )
-                ? stats.bestSimilarity
-                : 0;
+            finiteOr(
+                stats.bestSimilarity,
+                lastDisplayedGenome
+                    ?.similarity,
+                0
+            );
 
 
         const fitness =
-            Number.isFinite(
-                stats.bestFitness
-            ) &&
-            stats.bestFitness !==
-                -Infinity
-                ? stats.bestFitness
-                : 0;
+            finiteOr(
+                stats.bestFitness,
+                lastDisplayedGenome
+                    ?.fitness,
+                0
+            );
 
 
         const generation =
-            Number.isFinite(
-                stats.generation
-            )
-                ? stats.generation
-                : 0;
+            finiteOr(
+                stats.generation,
+                geneticAlgorithm
+                    ?.generation,
+                0
+            );
 
 
         const attempts =
-            Number.isFinite(
-                stats.attempts
-            )
-                ? stats.attempts
-                : 0;
+            finiteOr(
+                stats.attempts,
+                stats.evaluations,
+                0
+            );
 
 
         const evaluations =
-            Number.isFinite(
-                stats.evaluations
-            )
-                ? stats.evaluations
-                : attempts;
+            finiteOr(
+                stats.evaluations,
+                fitnessEvaluator
+                    ?.getEvaluationCount?.(),
+                attempts
+            );
 
 
-        const triangles =
-            Number.isFinite(
-                stats.triangleCount
-            )
-                ? stats.triangleCount
-                : 0;
+        const settings =
+            getSettings();
+
+
+        const totalShapes =
+            finiteOr(
+                stats.totalShapeCount,
+                stats.shapeCount,
+                settings.totalShapeCount
+            );
+
+
+        const resolution =
+            stats.resolution ??
+            stats.resolutionLabel ??
+            getResolutionLabel();
+
+
+        /*
+         * Improvement since the previous UI refresh.
+         */
+
+        let improvement =
+            0;
+
+
+        if (
+            generation >
+            previousDisplayedGeneration
+        ) {
+
+            improvement =
+                similarity -
+                previousDisplayedSimilarity;
+        }
+
+
+        previousDisplayedSimilarity =
+            similarity;
+
+
+        previousDisplayedGeneration =
+            generation;
 
 
 
         /* ===============================================
-           HEADER STATS
+           HEADER
            =============================================== */
 
         setText(
@@ -1244,14 +2257,20 @@ async function initialiseApplication() {
         setText(
             elements.triangleStat,
             formatInteger(
-                triangles
+                totalShapes
             )
+        );
+
+
+        setText(
+            elements.resolutionStat,
+            resolution
         );
 
 
 
         /* ===============================================
-           LARGE STATS
+           LARGE STATISTICS
            =============================================== */
 
         setText(
@@ -1264,7 +2283,9 @@ async function initialiseApplication() {
 
         setText(
             elements.fitnessStat,
-            fitness.toFixed(6)
+            Number.isFinite(fitness)
+                ? fitness.toFixed(6)
+                : "—"
         );
 
 
@@ -1284,9 +2305,23 @@ async function initialiseApplication() {
         );
 
 
+        setText(
+            elements.resolutionLarge,
+            resolution
+        );
+
+
+        setText(
+            elements.improvementStat,
+            formatImprovement(
+                improvement
+            )
+        );
+
+
 
         /* ===============================================
-           PROGRESS BAR
+           SIMILARITY BAR
            =============================================== */
 
         if (
@@ -1313,10 +2348,14 @@ async function initialiseApplication() {
 
 
     /* =====================================================
-       RESET STATISTICS DISPLAY
+       RESET STATISTICS
        ===================================================== */
 
     function resetStatisticsDisplay() {
+
+        const settings =
+            getSettings();
+
 
         setText(
             elements.similarityStat,
@@ -1338,8 +2377,15 @@ async function initialiseApplication() {
 
         setText(
             elements.triangleStat,
-            getSettings()
-                .triangleCount
+            formatInteger(
+                settings.totalShapeCount
+            )
+        );
+
+
+        setText(
+            elements.resolutionStat,
+            getResolutionLabel()
         );
 
 
@@ -1367,6 +2413,18 @@ async function initialiseApplication() {
         );
 
 
+        setText(
+            elements.resolutionLarge,
+            getResolutionLabel()
+        );
+
+
+        setText(
+            elements.improvementStat,
+            "—"
+        );
+
+
         if (
             elements.similarityBar
         ) {
@@ -1375,6 +2433,41 @@ async function initialiseApplication() {
                 .style.width =
                 "0%";
         }
+    }
+
+
+
+    /* =====================================================
+       UTILITY: FIRST FINITE NUMBER
+       ===================================================== */
+
+    function finiteOr(
+        ...values
+    ) {
+
+        for (
+            const value of
+            values
+        ) {
+
+            const number =
+                Number(
+                    value
+                );
+
+
+            if (
+                Number.isFinite(
+                    number
+                )
+            ) {
+
+                return number;
+            }
+        }
+
+
+        return 0;
     }
 
 
@@ -1403,9 +2496,11 @@ async function initialiseApplication() {
        FORMAT SIMILARITY
        ===================================================== */
 
-    function formatSimilarity(
-        value
-    ) {
+    function formatSimilarity(value) {
+
+        value =
+            Number(value);
+
 
         if (
             !Number.isFinite(value)
@@ -1427,9 +2522,11 @@ async function initialiseApplication() {
        FORMAT INTEGER
        ===================================================== */
 
-    function formatInteger(
-        value
-    ) {
+    function formatInteger(value) {
+
+        value =
+            Number(value);
+
 
         if (
             !Number.isFinite(value)
@@ -1441,6 +2538,47 @@ async function initialiseApplication() {
 
         return Math.floor(value)
             .toLocaleString();
+    }
+
+
+
+    /* =====================================================
+       FORMAT IMPROVEMENT
+       ===================================================== */
+
+    function formatImprovement(value) {
+
+        value =
+            Number(value);
+
+
+        if (
+            !Number.isFinite(value)
+        ) {
+
+            return "—";
+        }
+
+
+        if (
+            Math.abs(value) <
+            0.000001
+        ) {
+
+            return "0.0000%";
+        }
+
+
+        return (
+            (
+                value >
+                0
+                    ? "+"
+                    : ""
+            ) +
+            value.toFixed(4) +
+            "%"
+        );
     }
 
 
@@ -1462,7 +2600,11 @@ async function initialiseApplication() {
             elements.startButton.textContent =
                 running
                     ? "Evolution Running"
-                    : "Start Evolution";
+                    : (
+                        geneticAlgorithm
+                            ? "Resume Evolution"
+                            : "Start Evolution"
+                    );
         }
 
 
@@ -1497,17 +2639,52 @@ async function initialiseApplication() {
             elements.stepButton.disabled =
                 running;
         }
+
+
+        const hasGenome =
+            Boolean(
+                lastDisplayedGenome
+            );
+
+
+        if (
+            elements.downloadButton
+        ) {
+
+            elements.downloadButton.disabled =
+                !hasGenome;
+        }
+
+
+        if (
+            elements.downloadJsonButton
+        ) {
+
+            elements.downloadJsonButton.disabled =
+                !hasGenome;
+        }
+
+
+        if (
+            elements.downloadGifButton
+        ) {
+
+            elements.downloadGifButton.disabled =
+                !hasGenome;
+        }
     }
 
 
 
     /* =====================================================
-       DOWNLOAD IMAGE
+       PNG EXPORT
        ===================================================== */
 
-    function downloadImage() {
+    async function downloadPNG() {
 
-        if (!lastDisplayedGenome) {
+        if (
+            !lastDisplayedGenome
+        ) {
 
             showCanvasMessage(
                 "Start the evolution before saving an image."
@@ -1517,19 +2694,479 @@ async function initialiseApplication() {
         }
 
 
-        /*
-         * Make absolutely sure the all-time best genome is
-         * what gets exported.
-         */
+        try {
 
-        renderer.render(
-            lastDisplayedGenome
+            if (
+                exportManager
+            ) {
+
+                await exportManager
+                    .exportPNG(
+                        lastDisplayedGenome,
+                        "evolved-mona-lisa.png"
+                    );
+
+            } else {
+
+                /*
+                 * Compatibility fallback.
+                 */
+
+                renderer.render(
+                    lastDisplayedGenome
+                );
+
+
+                if (
+                    typeof renderer
+                        .downloadPNG ===
+                    "function"
+                ) {
+
+                    renderer.downloadPNG(
+                        "evolved-mona-lisa.png"
+                    );
+                }
+            }
+
+        } catch (error) {
+
+            console.error(
+                "PNG export failed:",
+                error
+            );
+
+
+            updateExportStatus(
+                "PNG export failed.",
+                "error"
+            );
+        }
+    }
+
+
+
+    /* =====================================================
+       JSON EXPORT
+       ===================================================== */
+
+    function downloadJSON() {
+
+        if (
+            !lastDisplayedGenome
+        ) {
+
+            showCanvasMessage(
+                "Start evolution before exporting a genome."
+            );
+
+            return;
+        }
+
+
+        if (
+            !exportManager
+        ) {
+
+            updateExportStatus(
+                "ExportManager.js is not loaded.",
+                "error"
+            );
+
+            return;
+        }
+
+
+        try {
+
+            const stats =
+                getAlgorithmStatistics();
+
+
+            exportManager
+                .exportJSON(
+                    lastDisplayedGenome,
+                    {
+                        generation:
+                            stats.generation,
+
+                        evaluations:
+                            stats.evaluations
+                    },
+                    "evolved-mona-lisa.json"
+                );
+
+        } catch (error) {
+
+            console.error(
+                "JSON export failed:",
+                error
+            );
+        }
+    }
+
+
+
+    /* =====================================================
+       GIF EXPORT
+       ===================================================== */
+
+    async function downloadGIF() {
+
+        if (
+            !lastDisplayedGenome
+        ) {
+
+            showCanvasMessage(
+                "Start evolution before exporting a GIF."
+            );
+
+            return;
+        }
+
+
+        if (
+            !exportManager
+        ) {
+
+            updateExportStatus(
+                "ExportManager.js is not loaded.",
+                "error"
+            );
+
+            return;
+        }
+
+
+        const settings =
+            getSettings();
+
+
+        try {
+
+            elements.downloadGifButton &&
+                (
+                    elements.downloadGifButton.disabled =
+                        true
+                );
+
+
+            await exportManager
+                .exportGIF(
+                    lastDisplayedGenome,
+                    {
+                        mode:
+                            settings.gifMode,
+
+                        frameDelay:
+                            settings.gifFrameDelay,
+
+                        shapesPerFrame:
+                            settings.shapesPerFrame,
+
+                        filename:
+                            settings.gifMode ===
+                                "history"
+                                ? "mona-lisa-evolution.gif"
+                                : "mona-lisa-build.gif"
+                    }
+                );
+
+        } catch (error) {
+
+            console.error(
+                "GIF export failed:",
+                error
+            );
+
+
+            updateExportStatus(
+                error.message ??
+                "GIF export failed.",
+                "error"
+            );
+
+        } finally {
+
+            updateButtonState();
+        }
+    }
+
+
+
+    /* =====================================================
+       IMPORT GENOME JSON
+       ===================================================== */
+
+    async function genomeFileChanged(event) {
+
+        const file =
+            event.target
+                .files?.[0];
+
+
+        if (!file) {
+            return;
+        }
+
+
+        if (
+            !exportManager
+        ) {
+
+            updateExportStatus(
+                "ExportManager.js is not loaded.",
+                "error"
+            );
+
+            return;
+        }
+
+
+        stopEvolution();
+
+
+        try {
+
+            const genome =
+                await exportManager
+                    .importJSONFile(
+                        file
+                    );
+
+
+            /*
+             * Imported fitness is deliberately considered
+             * stale. Evaluate it against the currently loaded
+             * target before displaying a score.
+             */
+
+            if (
+                typeof fitnessEvaluator
+                    .evaluateGenome ===
+                "function"
+            ) {
+
+                fitnessEvaluator
+                    .evaluateGenome(
+                        genome,
+                        renderer,
+                        1,
+                        false
+                    );
+            }
+
+
+            lastDisplayedGenome =
+                genome;
+
+
+            renderer.render(
+                genome
+            );
+
+
+            /*
+             * The imported genome can be viewed/exported
+             * immediately. Evolution itself starts a new GA
+             * unless the algorithm provides an explicit
+             * import/resume API.
+             */
+
+            geneticAlgorithm =
+                null;
+
+
+            if (
+                exportManager
+            ) {
+
+                exportManager
+                    .clearHistory();
+
+
+                exportManager
+                    .recordHistory(
+                        genome,
+                        {
+                            generation:
+                                genome.generation ??
+                                0,
+
+                            similarity:
+                                genome.similarity,
+
+                            fitness:
+                                genome.fitness
+                        }
+                    );
+            }
+
+
+            hideCanvasMessage();
+
+
+            displayStandaloneGenomeStats(
+                genome
+            );
+
+
+            updateButtonState();
+
+
+            /*
+             * Allow selecting the same file again later.
+             */
+
+            event.target.value =
+                "";
+
+        } catch (error) {
+
+            console.error(
+                "Unable to import genome:",
+                error
+            );
+
+
+            showCanvasMessage(
+                "Unable to import that genome JSON."
+            );
+
+
+            event.target.value =
+                "";
+        }
+    }
+
+
+
+    /* =====================================================
+       DISPLAY IMPORTED GENOME STATS
+       ===================================================== */
+
+    function displayStandaloneGenomeStats(
+        genome
+    ) {
+
+        const similarity =
+            finiteOr(
+                genome.similarity,
+                0
+            );
+
+
+        const fitness =
+            finiteOr(
+                genome.fitness,
+                0
+            );
+
+
+        const generation =
+            finiteOr(
+                genome.generation,
+                0
+            );
+
+
+        let shapeCount =
+            0;
+
+
+        if (
+            typeof genome.getShapes ===
+            "function"
+        ) {
+
+            shapeCount =
+                genome.getShapes()
+                    .length;
+
+        } else if (
+            Array.isArray(
+                genome.shapes
+            )
+        ) {
+
+            shapeCount =
+                genome.shapes.length;
+        }
+
+
+        setText(
+            elements.similarityStat,
+            formatSimilarity(
+                similarity
+            )
         );
 
 
-        renderer.downloadPNG(
-            "evolved-mona-lisa.png"
+        setText(
+            elements.similarityLarge,
+            formatSimilarity(
+                similarity
+            )
         );
+
+
+        setText(
+            elements.fitnessStat,
+            fitness.toFixed(6)
+        );
+
+
+        setText(
+            elements.generationStat,
+            formatInteger(
+                generation
+            )
+        );
+
+
+        setText(
+            elements.generationLarge,
+            formatInteger(
+                generation
+            )
+        );
+
+
+        setText(
+            elements.triangleStat,
+            formatInteger(
+                shapeCount
+            )
+        );
+
+
+        setText(
+            elements.resolutionStat,
+            getResolutionLabel()
+        );
+
+
+        setText(
+            elements.resolutionLarge,
+            getResolutionLabel()
+        );
+
+
+        if (
+            elements.similarityBar
+        ) {
+
+            elements.similarityBar
+                .style.width =
+                Math.max(
+                    0,
+                    Math.min(
+                        100,
+                        similarity
+                    )
+                ) +
+                "%";
+        }
     }
 
 
@@ -1538,9 +3175,7 @@ async function initialiseApplication() {
        TARGET IMAGE CHANGED
        ===================================================== */
 
-    async function targetFileChanged(
-        event
-    ) {
+    async function targetFileChanged(event) {
 
         const file =
             event.target
@@ -1568,17 +3203,9 @@ async function initialiseApplication() {
                 );
 
 
-            /*
-             * Update both target previews.
-             */
-
             targetImage
                 .updatePagePreviews();
 
-
-            /*
-             * Give FitnessEvaluator the new target pixels.
-             */
 
             targetImage
                 .applyToFitnessEvaluator(
@@ -1587,12 +3214,8 @@ async function initialiseApplication() {
 
 
             /*
-             * A genome scored against Mona Lisa cannot be
-             * compared with a genome scored against a new
-             * uploaded image.
-             *
-             * Therefore target replacement always starts a
-             * completely new evolutionary search.
+             * Fitness scores from the previous target have no
+             * meaning against the new target.
              */
 
             geneticAlgorithm =
@@ -1603,16 +3226,43 @@ async function initialiseApplication() {
                 null;
 
 
+            previousDisplayedSimilarity =
+                0;
+
+
+            previousDisplayedGeneration =
+                0;
+
+
+            lastHistoryGeneration =
+                -1;
+
+
+            if (
+                exportManager
+            ) {
+
+                exportManager
+                    .clearHistory();
+            }
+
+
             renderer.clear();
 
 
             resetStatisticsDisplay();
 
 
+            updateButtonState();
+
+
             showCanvasMessage(
                 "New target loaded. Press Start Evolution."
             );
 
+
+            event.target.value =
+                "";
 
         } catch (error) {
 
@@ -1625,6 +3275,10 @@ async function initialiseApplication() {
             showCanvasMessage(
                 "Unable to load that image."
             );
+
+
+            event.target.value =
+                "";
         }
     }
 
@@ -1632,6 +3286,10 @@ async function initialiseApplication() {
 
     /* =====================================================
        STRUCTURAL PARAMETER CHANGED
+
+       Shape counts and population size alter the actual
+       structure of the search, so an existing population
+       cannot simply continue.
        ===================================================== */
 
     function structuralParameterChanged() {
@@ -1639,19 +3297,9 @@ async function initialiseApplication() {
         updateControlLabels();
 
 
-        /*
-         * Triangle count and population size determine the
-         * structure of the current population.
-         *
-         * They take effect when evolution is restarted.
-         *
-         * Resetting immediately makes the UI behaviour
-         * unambiguous.
-         */
-
         if (
             geneticAlgorithm &&
-            geneticAlgorithm.isInitialised()
+            isAlgorithmInitialised()
         ) {
 
             resetEvolution();
@@ -1669,44 +3317,65 @@ async function initialiseApplication() {
         updateControlLabels();
 
 
-        if (!geneticAlgorithm) {
-            return;
-        }
-
-
-        const settings =
-            getSettings();
-
-
-        geneticAlgorithm
-            .setMutationsPerChild(
-                settings.mutationsPerChild
-            );
-
-
-        geneticAlgorithm
-            .setMutationStrength(
-                settings.mutationStrength
-            );
+        applyLiveAlgorithmSettings();
     }
 
 
 
     /* =====================================================
-       BACKGROUND MODE CHANGED
+       ADVANCED OPTION CHANGED
+       ===================================================== */
+
+    function advancedOptionChanged() {
+
+        const settings =
+            getSettings();
+
+
+        /*
+         * Progressive-resolution changes alter the meaning
+         * of every fitness score, so restart the search.
+         */
+
+        if (
+            typeof fitnessEvaluator
+                .setProgressiveEnabled ===
+            "function"
+        ) {
+
+            fitnessEvaluator
+                .setProgressiveEnabled(
+                    settings.progressiveResolution
+                );
+        }
+
+
+        if (
+            geneticAlgorithm &&
+            isAlgorithmInitialised()
+        ) {
+
+            resetEvolution();
+        }
+    }
+
+
+
+    /* =====================================================
+       BACKGROUND CHANGED
        ===================================================== */
 
     function backgroundChanged() {
 
         /*
-         * Background is part of every genome's rendered
-         * phenotype, so changing it invalidates all fitness
-         * scores.
+         * Background colour contributes to every scored
+         * pixel. Existing fitness values therefore become
+         * invalid.
          */
 
         if (
             geneticAlgorithm &&
-            geneticAlgorithm.isInitialised()
+            isAlgorithmInitialised()
         ) {
 
             resetEvolution();
@@ -1722,204 +3391,223 @@ async function initialiseApplication() {
     function connectControls() {
 
 
-        /* ===============================================
-           START
-           =============================================== */
+        /* =================================================
+           PLAYBACK
+           ================================================= */
 
-        if (
-            elements.startButton
-        ) {
-
-            elements.startButton
-                .addEventListener(
-                    "click",
-                    startEvolution
-                );
-        }
+        elements.startButton
+            ?.addEventListener(
+                "click",
+                startEvolution
+            );
 
 
-        if (
-            elements.resumeButton
-        ) {
-
-            elements.resumeButton
-                .addEventListener(
-                    "click",
-                    startEvolution
-                );
-        }
+        elements.resumeButton
+            ?.addEventListener(
+                "click",
+                startEvolution
+            );
 
 
+        elements.pauseButton
+            ?.addEventListener(
+                "click",
+                stopEvolution
+            );
 
-        /* ===============================================
-           PAUSE
-           =============================================== */
 
-        if (
-            elements.pauseButton
-        ) {
+        elements.stepButton
+            ?.addEventListener(
+                "click",
+                stepEvolution
+            );
 
-            elements.pauseButton
-                .addEventListener(
-                    "click",
-                    stopEvolution
-                );
-        }
+
+        elements.resetButton
+            ?.addEventListener(
+                "click",
+                resetEvolution
+            );
 
 
 
-        /* ===============================================
-           STEP
-           =============================================== */
+        /* =================================================
+           TARGET
+           ================================================= */
 
-        if (
-            elements.stepButton
-        ) {
-
-            elements.stepButton
-                .addEventListener(
-                    "click",
-                    stepEvolution
-                );
-        }
+        elements.imageUpload
+            ?.addEventListener(
+                "change",
+                targetFileChanged
+            );
 
 
 
-        /* ===============================================
-           RESET
-           =============================================== */
-
-        if (
-            elements.resetButton
-        ) {
-
-            elements.resetButton
-                .addEventListener(
-                    "click",
-                    resetEvolution
-                );
-        }
-
-
-
-        /* ===============================================
-           DOWNLOAD
-           =============================================== */
-
-        if (
-            elements.downloadButton
-        ) {
-
-            elements.downloadButton
-                .addEventListener(
-                    "click",
-                    downloadImage
-                );
-        }
-
-
-
-        /* ===============================================
-           IMAGE UPLOAD
-           =============================================== */
-
-        if (
-            elements.imageUpload
-        ) {
-
-            elements.imageUpload
-                .addEventListener(
-                    "change",
-                    targetFileChanged
-                );
-        }
-
-
-
-        /* ===============================================
+        /* =================================================
            STRUCTURAL CONTROLS
-           =============================================== */
+           ================================================= */
 
-        if (
-            elements.triangleCount
-        ) {
-
-            elements.triangleCount
-                .addEventListener(
-                    "input",
-                    structuralParameterChanged
-                );
-        }
+        elements.triangleCount
+            ?.addEventListener(
+                "input",
+                structuralParameterChanged
+            );
 
 
-        if (
-            elements.populationSize
-        ) {
-
-            elements.populationSize
-                .addEventListener(
-                    "input",
-                    structuralParameterChanged
-                );
-        }
+        elements.circleCount
+            ?.addEventListener(
+                "input",
+                structuralParameterChanged
+            );
 
 
+        elements.dotCount
+            ?.addEventListener(
+                "input",
+                structuralParameterChanged
+            );
 
-        /* ===============================================
+
+        elements.populationSize
+            ?.addEventListener(
+                "input",
+                structuralParameterChanged
+            );
+
+
+
+        /* =================================================
            LIVE CONTROLS
-           =============================================== */
+           ================================================= */
 
-        if (
-            elements.mutationsPerChild
-        ) {
-
-            elements.mutationsPerChild
-                .addEventListener(
-                    "input",
-                    liveParameterChanged
-                );
-        }
+        elements.mutationsPerChild
+            ?.addEventListener(
+                "input",
+                liveParameterChanged
+            );
 
 
-        if (
-            elements.mutationStrength
-        ) {
-
-            elements.mutationStrength
-                .addEventListener(
-                    "input",
-                    liveParameterChanged
-                );
-        }
+        elements.mutationStrength
+            ?.addEventListener(
+                "input",
+                liveParameterChanged
+            );
 
 
-        if (
-            elements.evolutionSpeed
-        ) {
-
-            elements.evolutionSpeed
-                .addEventListener(
-                    "input",
-                    updateControlLabels
-                );
-        }
+        elements.evolutionSpeed
+            ?.addEventListener(
+                "input",
+                updateControlLabels
+            );
 
 
 
-        /* ===============================================
+        /* =================================================
+           ADVANCED EVOLUTION
+           ================================================= */
+
+        elements.progressiveResolution
+            ?.addEventListener(
+                "change",
+                advancedOptionChanged
+            );
+
+
+        elements.adaptiveMutation
+            ?.addEventListener(
+                "change",
+                liveParameterChanged
+            );
+
+
+        elements.errorGuidedMutation
+            ?.addEventListener(
+                "change",
+                liveParameterChanged
+            );
+
+
+
+        /* =================================================
            BACKGROUND
-           =============================================== */
+           ================================================= */
 
-        if (
-            elements.backgroundMode
-        ) {
+        elements.backgroundMode
+            ?.addEventListener(
+                "change",
+                backgroundChanged
+            );
 
-            elements.backgroundMode
-                .addEventListener(
-                    "change",
-                    backgroundChanged
-                );
-        }
+
+
+        /* =================================================
+           EXPORT
+           ================================================= */
+
+        elements.downloadButton
+            ?.addEventListener(
+                "click",
+                downloadPNG
+            );
+
+
+        elements.downloadJsonButton
+            ?.addEventListener(
+                "click",
+                downloadJSON
+            );
+
+
+        elements.downloadGifButton
+            ?.addEventListener(
+                "click",
+                downloadGIF
+            );
+
+
+        elements.genomeUpload
+            ?.addEventListener(
+                "change",
+                genomeFileChanged
+            );
+
+
+        elements.gifFrameDelay
+            ?.addEventListener(
+                "input",
+                () => {
+
+                    if (
+                        exportManager
+                    ) {
+
+                        exportManager
+                            .setGIFFrameDelay(
+                                getSettings()
+                                    .gifFrameDelay
+                            );
+                    }
+                }
+            );
+
+
+        elements.shapesPerFrame
+            ?.addEventListener(
+                "input",
+                () => {
+
+                    if (
+                        exportManager
+                    ) {
+
+                        exportManager
+                            .setShapesPerFrame(
+                                getSettings()
+                                    .shapesPerFrame
+                            );
+                    }
+                }
+            );
     }
 
 
@@ -1942,8 +3630,9 @@ async function initialiseApplication() {
 
 
             /*
-             * The TargetImage canvas is the authoritative
-             * version used by FitnessEvaluator.
+             * TargetImage supplies the canonical full
+             * resolution pixels. FitnessEvaluator creates its
+             * own progressive-resolution versions from these.
              */
 
             targetImage
@@ -1952,19 +3641,16 @@ async function initialiseApplication() {
                 );
 
 
-            /*
-             * Update both HTML preview images so they show
-             * exactly the processed target.
-             */
-
             targetImage
                 .updatePagePreviews();
+
+
+            resetStatisticsDisplay();
 
 
             showCanvasMessage(
                 "Press Start Evolution to begin."
             );
-
 
         } catch (error) {
 
@@ -1998,21 +3684,18 @@ async function initialiseApplication() {
     connectControls();
 
 
+    updateExportStatus(
+        "Nothing exported yet."
+    );
+
+
     await loadDefaultTarget();
 
 
 
-    /*
-     * Expose a small debugging API in the browser console.
-     *
-     * This is useful while developing the project.
-     *
-     * Example:
-     *
-     * MonaEvolution.algorithm()
-     * MonaEvolution.target
-     * MonaEvolution.renderer
-     */
+    /* =====================================================
+       DEBUGGING / DEVELOPMENT API
+       ===================================================== */
 
     window.MonaEvolution = {
 
@@ -2025,9 +3708,19 @@ async function initialiseApplication() {
         fitnessEvaluator:
             fitnessEvaluator,
 
+        exporter:
+            exportManager,
+
         algorithm:
             () =>
                 geneticAlgorithm,
+
+        bestGenome:
+            () =>
+                lastDisplayedGenome,
+
+        settings:
+            getSettings,
 
         start:
             startEvolution,
@@ -2039,7 +3732,16 @@ async function initialiseApplication() {
             stepEvolution,
 
         reset:
-            resetEvolution
+            resetEvolution,
+
+        exportPNG:
+            downloadPNG,
+
+        exportJSON:
+            downloadJSON,
+
+        exportGIF:
+            downloadGIF
 
     };
 

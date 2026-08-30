@@ -5,13 +5,21 @@
 
    Represents a collection of candidate Genome objects.
 
+   Each Genome contains a configurable mixture of:
+
+   - TriangleGene
+   - CircleGene
+   - DotGene
+
    Responsibilities:
 
    - Create the initial population
    - Store genomes
    - Sort genomes by fitness
-   - Retrieve the best/worst genomes
+   - Retrieve best / worst genomes
+   - Tournament selection
    - Replace generations
+   - Resize / reset population
    - Calculate population statistics
    ========================================================= */
 
@@ -26,16 +34,20 @@ class Population {
     constructor(
         populationSize = 30,
         triangleCount = 100,
+        circleCount = 40,
+        dotCount = 25,
         width = 480,
         height = 715
     ) {
 
         /*
-         * Also support:
+         * Preferred form:
          *
          * new Population({
          *     populationSize: 30,
          *     triangleCount: 100,
+         *     circleCount: 40,
+         *     dotCount: 25,
          *     width: 480,
          *     height: 715
          * });
@@ -61,6 +73,16 @@ class Population {
                 100;
 
 
+            circleCount =
+                options.circleCount ??
+                40;
+
+
+            dotCount =
+                options.dotCount ??
+                25;
+
+
             width =
                 options.width ??
                 480;
@@ -73,46 +95,47 @@ class Population {
 
 
         this.populationSize =
-            Math.max(
-                2,
-                Math.floor(populationSize)
+            this.normalisePopulationSize(
+                populationSize
             );
 
 
         this.triangleCount =
-            Math.max(
-                1,
-                Math.floor(triangleCount)
+            this.normaliseShapeCount(
+                triangleCount
+            );
+
+
+        this.circleCount =
+            this.normaliseShapeCount(
+                circleCount
+            );
+
+
+        this.dotCount =
+            this.normaliseShapeCount(
+                dotCount
             );
 
 
         this.width =
-            Math.max(
-                1,
-                Math.floor(width)
+            this.normaliseDimension(
+                width
             );
 
 
         this.height =
-            Math.max(
-                1,
-                Math.floor(height)
+            this.normaliseDimension(
+                height
             );
 
 
         /*
          * Main collection.
-         *
-         * GeneticAlgorithm.getPopulationGenomes()
-         * specifically supports this property.
          */
 
         this.genomes = [];
 
-
-        /*
-         * Create the first random generation.
-         */
 
         this.createInitialPopulation();
     }
@@ -162,11 +185,31 @@ class Population {
         }
 
 
-        return new Genome(
-            this.triangleCount,
-            this.width,
-            this.height
-        );
+        /*
+         * Use the options-object form.
+         *
+         * This avoids ambiguity now that Genome has several
+         * different shape counts.
+         */
+
+        return new Genome({
+
+            triangleCount:
+                this.triangleCount,
+
+            circleCount:
+                this.circleCount,
+
+            dotCount:
+                this.dotCount,
+
+            width:
+                this.width,
+
+            height:
+                this.height
+
+        });
     }
 
 
@@ -206,6 +249,67 @@ class Population {
             genomes.length;
 
 
+        /*
+         * If possible, update our configured shape counts
+         * from the first Genome.
+         */
+
+        if (
+            genomes.length > 0
+        ) {
+
+            this.updateCountsFromGenome(
+                genomes[0]
+            );
+        }
+
+
+        return this;
+    }
+
+
+
+    /* =====================================================
+       UPDATE CONFIGURATION FROM GENOME
+       ===================================================== */
+
+    updateCountsFromGenome(genome) {
+
+        if (!genome) {
+            return this;
+        }
+
+
+        if (
+            typeof genome.getTriangleCount ===
+            "function"
+        ) {
+
+            this.triangleCount =
+                genome.getTriangleCount();
+        }
+
+
+        if (
+            typeof genome.getCircleCount ===
+            "function"
+        ) {
+
+            this.circleCount =
+                genome.getCircleCount();
+        }
+
+
+        if (
+            typeof genome.getDotCount ===
+            "function"
+        ) {
+
+            this.dotCount =
+                genome.getDotCount();
+        }
+
+
         return this;
     }
 
@@ -242,10 +346,17 @@ class Population {
 
     getGenome(index) {
 
+        index =
+            Math.floor(
+                Number(index)
+            );
+
+
         if (
+            !Number.isFinite(index) ||
             index < 0 ||
             index >=
-            this.genomes.length
+                this.genomes.length
         ) {
 
             return null;
@@ -289,10 +400,17 @@ class Population {
 
     removeGenome(index) {
 
+        index =
+            Math.floor(
+                Number(index)
+            );
+
+
         if (
+            !Number.isFinite(index) ||
             index < 0 ||
             index >=
-            this.genomes.length
+                this.genomes.length
         ) {
 
             return null;
@@ -323,7 +441,12 @@ class Population {
 
         this.genomes = [];
 
-        this.populationSize = 0;
+
+        this.populationSize =
+            0;
+
+
+        return this;
     }
 
 
@@ -337,35 +460,148 @@ class Population {
         this.genomes.sort(
             (a, b) => {
 
-                const fitnessA =
-                    Number.isFinite(
-                        a?.fitness
-                    )
-                        ? a.fitness
-                        : -Infinity;
-
-
-                const fitnessB =
-                    Number.isFinite(
-                        b?.fitness
-                    )
-                        ? b.fitness
-                        : -Infinity;
-
-
-                /*
-                 * Highest fitness first.
-                 */
-
                 return (
-                    fitnessB -
-                    fitnessA
+                    this.getGenomeFitness(b) -
+                    this.getGenomeFitness(a)
                 );
             }
         );
 
 
         return this.genomes;
+    }
+
+
+
+    /* =====================================================
+       FITNESS VALUE
+       ===================================================== */
+
+    getGenomeFitness(genome) {
+
+        if (!genome) {
+
+            return -Infinity;
+        }
+
+
+        if (
+            Number.isFinite(
+                genome.fitness
+            )
+        ) {
+
+            return genome.fitness;
+        }
+
+
+        if (
+            typeof genome.getFitness ===
+            "function"
+        ) {
+
+            const fitness =
+                genome.getFitness();
+
+
+            if (
+                Number.isFinite(fitness)
+            ) {
+
+                return fitness;
+            }
+        }
+
+
+        return -Infinity;
+    }
+
+
+
+    /* =====================================================
+       SIMILARITY VALUE
+       ===================================================== */
+
+    getGenomeSimilarity(genome) {
+
+        if (!genome) {
+            return undefined;
+        }
+
+
+        if (
+            Number.isFinite(
+                genome.similarity
+            )
+        ) {
+
+            return genome.similarity;
+        }
+
+
+        if (
+            typeof genome.getSimilarity ===
+            "function"
+        ) {
+
+            const similarity =
+                genome.getSimilarity();
+
+
+            if (
+                Number.isFinite(similarity)
+            ) {
+
+                return similarity;
+            }
+        }
+
+
+        return undefined;
+    }
+
+
+
+    /* =====================================================
+       ERROR VALUE
+       ===================================================== */
+
+    getGenomeError(genome) {
+
+        if (!genome) {
+            return undefined;
+        }
+
+
+        if (
+            Number.isFinite(
+                genome.error
+            )
+        ) {
+
+            return genome.error;
+        }
+
+
+        if (
+            typeof genome.getError ===
+            "function"
+        ) {
+
+            const error =
+                genome.getError();
+
+
+            if (
+                Number.isFinite(error)
+            ) {
+
+                return error;
+            }
+        }
+
+
+        return undefined;
     }
 
 
@@ -394,21 +630,14 @@ class Population {
 
 
         for (
-            let i = 0;
-            i < this.genomes.length;
-            i++
+            const genome of
+            this.genomes
         ) {
 
-            const genome =
-                this.genomes[i];
-
-
             const fitness =
-                Number.isFinite(
-                    genome?.fitness
-                )
-                    ? genome.fitness
-                    : -Infinity;
+                this.getGenomeFitness(
+                    genome
+                );
 
 
             if (
@@ -456,21 +685,14 @@ class Population {
 
 
         for (
-            let i = 0;
-            i < this.genomes.length;
-            i++
+            const genome of
+            this.genomes
         ) {
 
-            const genome =
-                this.genomes[i];
-
-
             const fitness =
-                Number.isFinite(
-                    genome?.fitness
-                )
-                    ? genome.fitness
-                    : -Infinity;
+                this.getGenomeFitness(
+                    genome
+                );
 
 
             if (
@@ -509,14 +731,12 @@ class Population {
         }
 
 
-        const index =
+        return this.genomes[
             Math.floor(
                 Math.random() *
                 this.genomes.length
-            );
-
-
-        return this.genomes[index];
+            )
+        ];
     }
 
 
@@ -530,7 +750,9 @@ class Population {
         count =
             Math.max(
                 0,
-                Math.floor(count)
+                Math.floor(
+                    Number(count) || 0
+                )
             );
 
 
@@ -541,25 +763,9 @@ class Population {
         sorted.sort(
             (a, b) => {
 
-                const fitnessA =
-                    Number.isFinite(
-                        a?.fitness
-                    )
-                        ? a.fitness
-                        : -Infinity;
-
-
-                const fitnessB =
-                    Number.isFinite(
-                        b?.fitness
-                    )
-                        ? b.fitness
-                        : -Infinity;
-
-
                 return (
-                    fitnessB -
-                    fitnessA
+                    this.getGenomeFitness(b) -
+                    this.getGenomeFitness(a)
                 );
             }
         );
@@ -594,7 +800,9 @@ class Population {
             Math.max(
                 1,
                 Math.floor(
-                    tournamentSize
+                    Number(
+                        tournamentSize
+                    ) || 1
                 )
             );
 
@@ -618,11 +826,9 @@ class Population {
 
 
             const fitness =
-                Number.isFinite(
-                    candidate?.fitness
-                )
-                    ? candidate.fitness
-                    : -Infinity;
+                this.getGenomeFitness(
+                    candidate
+                );
 
 
             if (
@@ -674,14 +880,18 @@ class Population {
             this.genomes
         ) {
 
+            const fitness =
+                this.getGenomeFitness(
+                    genome
+                );
+
+
             if (
-                Number.isFinite(
-                    genome.fitness
-                )
+                Number.isFinite(fitness)
             ) {
 
                 total +=
-                    genome.fitness;
+                    fitness;
 
 
                 evaluated++;
@@ -734,14 +944,20 @@ class Population {
             this.genomes
         ) {
 
+            const similarity =
+                this.getGenomeSimilarity(
+                    genome
+                );
+
+
             if (
                 Number.isFinite(
-                    genome.similarity
+                    similarity
                 )
             ) {
 
                 total +=
-                    genome.similarity;
+                    similarity;
 
 
                 evaluated++;
@@ -794,14 +1010,20 @@ class Population {
             this.genomes
         ) {
 
+            const error =
+                this.getGenomeError(
+                    genome
+                );
+
+
             if (
                 Number.isFinite(
-                    genome.error
+                    error
                 )
             ) {
 
                 total +=
-                    genome.error;
+                    error;
 
 
                 evaluated++;
@@ -849,9 +1071,15 @@ class Population {
             this.genomes
         ) {
 
+            const fitness =
+                this.getGenomeFitness(
+                    genome
+                );
+
+
             if (
                 !Number.isFinite(
-                    genome.fitness
+                    fitness
                 )
             ) {
 
@@ -866,14 +1094,14 @@ class Population {
             minimum =
                 Math.min(
                     minimum,
-                    genome.fitness
+                    fitness
                 );
 
 
             maximum =
                 Math.max(
                     maximum,
-                    genome.fitness
+                    fitness
                 );
         }
 
@@ -926,7 +1154,9 @@ class Population {
 
             if (
                 Number.isFinite(
-                    genome.fitness
+                    this.getGenomeFitness(
+                        genome
+                    )
                 )
             ) {
 
@@ -953,14 +1183,14 @@ class Population {
 
             if (
                 typeof genome
-                    .invalidateFitness ===
+                    ?.invalidateFitness ===
                 "function"
             ) {
 
                 genome
                     .invalidateFitness();
 
-            } else {
+            } else if (genome) {
 
                 genome.fitness =
                     undefined;
@@ -974,6 +1204,9 @@ class Population {
                     undefined;
             }
         }
+
+
+        return this;
     }
 
 
@@ -985,9 +1218,10 @@ class Population {
     clone() {
 
         /*
-         * Don't invoke the normal constructor because that
-         * would unnecessarily generate a new random
-         * population.
+         * Do not invoke the normal constructor.
+         *
+         * That would unnecessarily generate a completely
+         * new random population before replacing it.
          */
 
         const clone =
@@ -1004,6 +1238,14 @@ class Population {
             this.triangleCount;
 
 
+        clone.circleCount =
+            this.circleCount;
+
+
+        clone.dotCount =
+            this.dotCount;
+
+
         clone.width =
             this.width;
 
@@ -1017,7 +1259,7 @@ class Population {
                 genome => {
 
                     if (
-                        typeof genome.clone ===
+                        typeof genome?.clone ===
                         "function"
                     ) {
 
@@ -1037,6 +1279,9 @@ class Population {
 
     /* =====================================================
        RESET
+
+       All four configuration values can be changed while
+       retaining the current values as defaults.
        ===================================================== */
 
     reset(
@@ -1044,24 +1289,36 @@ class Population {
             this.populationSize,
 
         triangleCount =
-            this.triangleCount
+            this.triangleCount,
+
+        circleCount =
+            this.circleCount,
+
+        dotCount =
+            this.dotCount
     ) {
 
         this.populationSize =
-            Math.max(
-                2,
-                Math.floor(
-                    populationSize
-                )
+            this.normalisePopulationSize(
+                populationSize
             );
 
 
         this.triangleCount =
-            Math.max(
-                1,
-                Math.floor(
-                    triangleCount
-                )
+            this.normaliseShapeCount(
+                triangleCount
+            );
+
+
+        this.circleCount =
+            this.normaliseShapeCount(
+                circleCount
+            );
+
+
+        this.dotCount =
+            this.normaliseShapeCount(
+                dotCount
             );
 
 
@@ -1074,22 +1331,84 @@ class Population {
 
 
     /* =====================================================
+       SET SHAPE COUNTS
+
+       Changes the configuration used when NEW genomes are
+       generated.
+
+       Existing genomes are deliberately not altered.
+       ===================================================== */
+
+    setShapeCounts(
+        triangleCount,
+        circleCount,
+        dotCount
+    ) {
+
+        this.triangleCount =
+            this.normaliseShapeCount(
+                triangleCount
+            );
+
+
+        this.circleCount =
+            this.normaliseShapeCount(
+                circleCount
+            );
+
+
+        this.dotCount =
+            this.normaliseShapeCount(
+                dotCount
+            );
+
+
+        return this;
+    }
+
+
+
+    /* =====================================================
+       GET SHAPE COUNTS
+       ===================================================== */
+
+    getShapeCounts() {
+
+        return {
+
+            triangles:
+                this.triangleCount,
+
+            circles:
+                this.circleCount,
+
+            dots:
+                this.dotCount,
+
+            total:
+                this.triangleCount +
+                this.circleCount +
+                this.dotCount
+
+        };
+    }
+
+
+
+    /* =====================================================
        RESIZE POPULATION
        ===================================================== */
 
     resize(newSize) {
 
         newSize =
-            Math.max(
-                2,
-                Math.floor(
-                    newSize
-                )
+            this.normalisePopulationSize(
+                newSize
             );
 
 
         /*
-         * Add new random genomes.
+         * Add random mixed-shape genomes.
          */
 
         while (
@@ -1104,8 +1423,7 @@ class Population {
 
 
         /*
-         * If shrinking, retain the strongest genomes
-         * whenever fitness information is available.
+         * When shrinking, preserve the strongest candidates.
          */
 
         if (
@@ -1134,25 +1452,24 @@ class Population {
 
 
     /* =====================================================
-       DIMENSIONS
+       SET DIMENSIONS
        ===================================================== */
 
     setDimensions(
         width,
-        height
+        height,
+        scaleShapes = true
     ) {
 
         this.width =
-            Math.max(
-                1,
-                Math.floor(width)
+            this.normaliseDimension(
+                width
             );
 
 
         this.height =
-            Math.max(
-                1,
-                Math.floor(height)
+            this.normaliseDimension(
+                height
             );
 
 
@@ -1163,15 +1480,90 @@ class Population {
 
             if (
                 typeof genome
-                    .setDimensions ===
+                    ?.setDimensions ===
                 "function"
             ) {
 
                 genome.setDimensions(
                     this.width,
-                    this.height
+                    this.height,
+                    scaleShapes
                 );
             }
+        }
+
+
+        return this;
+    }
+
+
+
+    /* =====================================================
+       REPLACE GENERATION
+
+       GeneticAlgorithm can use this when producing the
+       next generation.
+       ===================================================== */
+
+    replaceGeneration(
+        genomes
+    ) {
+
+        if (
+            !Array.isArray(
+                genomes
+            )
+        ) {
+
+            throw new Error(
+                "Population.replaceGeneration() requires an array."
+            );
+        }
+
+
+        this.genomes =
+            genomes;
+
+
+        this.populationSize =
+            genomes.length;
+
+
+        return this;
+    }
+
+
+
+    /* =====================================================
+       SHUFFLE POPULATION
+       ===================================================== */
+
+    shuffle() {
+
+        for (
+            let i =
+                this.genomes.length - 1;
+            i > 0;
+            i--
+        ) {
+
+            const j =
+                Math.floor(
+                    Math.random() *
+                    (i + 1)
+                );
+
+
+            const temporary =
+                this.genomes[i];
+
+
+            this.genomes[i] =
+                this.genomes[j];
+
+
+            this.genomes[j] =
+                temporary;
         }
 
 
@@ -1198,6 +1590,10 @@ class Population {
             this.getFitnessRange();
 
 
+        const shapeCounts =
+            this.getShapeCounts();
+
+
         return {
 
             size:
@@ -1205,6 +1601,28 @@ class Population {
 
             evaluated:
                 this.getEvaluatedCount(),
+
+
+            /* ===========================================
+               SHAPE CONFIGURATION
+               =========================================== */
+
+            triangleCount:
+                shapeCounts.triangles,
+
+            circleCount:
+                shapeCounts.circles,
+
+            dotCount:
+                shapeCounts.dots,
+
+            shapeCount:
+                shapeCounts.total,
+
+
+            /* ===========================================
+               AVERAGES
+               =========================================== */
 
             averageFitness:
                 this.getAverageFitness(),
@@ -1215,26 +1633,53 @@ class Population {
             averageError:
                 this.getAverageError(),
 
+
+            /* ===========================================
+               BEST
+               =========================================== */
+
             bestFitness:
                 Number.isFinite(
-                    best?.fitness
+                    this.getGenomeFitness(
+                        best
+                    )
                 )
-                    ? best.fitness
+                    ? this.getGenomeFitness(
+                        best
+                    )
                     : 0,
 
             bestSimilarity:
                 Number.isFinite(
-                    best?.similarity
+                    this.getGenomeSimilarity(
+                        best
+                    )
                 )
-                    ? best.similarity
+                    ? this.getGenomeSimilarity(
+                        best
+                    )
                     : 0,
+
+
+            /* ===========================================
+               WORST
+               =========================================== */
 
             worstFitness:
                 Number.isFinite(
-                    worst?.fitness
+                    this.getGenomeFitness(
+                        worst
+                    )
                 )
-                    ? worst.fitness
+                    ? this.getGenomeFitness(
+                        worst
+                    )
                     : 0,
+
+
+            /* ===========================================
+               RANGE
+               =========================================== */
 
             minimumFitness:
                 fitnessRange.minimum,
@@ -1246,6 +1691,93 @@ class Population {
                 fitnessRange.range
 
         };
+    }
+
+
+
+    /* =====================================================
+       NORMALISE POPULATION SIZE
+       ===================================================== */
+
+    normalisePopulationSize(value) {
+
+        value =
+            Number(value);
+
+
+        if (
+            !Number.isFinite(value)
+        ) {
+
+            value =
+                30;
+        }
+
+
+        return Math.max(
+            2,
+            Math.floor(value)
+        );
+    }
+
+
+
+    /* =====================================================
+       NORMALISE SHAPE COUNT
+
+       Zero is valid.
+
+       This lets the UI run experiments such as:
+
+       100 triangles
+       0 circles
+       0 dots
+       ===================================================== */
+
+    normaliseShapeCount(value) {
+
+        value =
+            Number(value);
+
+
+        if (
+            !Number.isFinite(value)
+        ) {
+
+            return 0;
+        }
+
+
+        return Math.max(
+            0,
+            Math.floor(value)
+        );
+    }
+
+
+
+    /* =====================================================
+       NORMALISE DIMENSION
+       ===================================================== */
+
+    normaliseDimension(value) {
+
+        value =
+            Number(value);
+
+
+        if (
+            !Number.isFinite(value)
+        ) {
+
+            return 1;
+        }
+
+
+        return Math.max(
+            1,
+            Math.floor(value)
+        );
     }
 
 }
